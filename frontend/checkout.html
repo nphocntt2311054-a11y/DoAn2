@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thanh Toán</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { 'primary': '#32795aff' } } }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <div class="container mx-auto px-4 py-10 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-primary">Xác Nhận Đơn Hàng</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2">Thông tin giao hàng</h2>
+                <form id="checkout-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Họ và tên</label>
+                        <input id="customer_name" type="text" class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary" placeholder="Nguyễn Văn A" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Số điện thoại</label>
+                        <input id="phone" type="tel" class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary" placeholder="09xxxxxxx" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Địa chỉ nhận hàng</label>
+                        <textarea id="address" class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:border-primary" rows="3" placeholder="Số nhà, đường, phường, quận..." required></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm h-fit">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2">Đơn hàng của bạn</h2>
+                
+                <div id="order-summary" class="space-y-3 mb-4 text-sm text-gray-600 max-h-60 overflow-y-auto">
+                    </div>
+
+                <div class="border-t pt-4 flex justify-between items-center text-xl font-bold text-red-600">
+                    <span>Tổng thanh toán:</span>
+                    <span id="order-total">0đ</span>
+                </div>
+
+                <button id="confirm-order-btn" class="w-full bg-primary text-white font-bold py-3 mt-6 rounded-lg hover:bg-opacity-90 transition shadow-md">
+                    XÁC NHẬN ĐẶT HÀNG
+                </button>
+                
+                <a href="cart.html" class="block text-center text-gray-500 text-sm mt-4 hover:underline">Quay lại giỏ hàng</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="checkout.js"></script>
+</body>
+</html>

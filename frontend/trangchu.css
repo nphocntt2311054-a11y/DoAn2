@@ -1,0 +1,48 @@
+.banner-container {
+  position: relative;
+  aspect-ratio: 1480 / 710;
+  overflow: hidden;
+}
+
+.banner-item {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.banner-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ==== Nút điều hướng ==== */
+.nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  z-index: 10;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.nav-btn svg {
+  width: 26px;
+  height: 26px;
+  color: #059669; 
+}
