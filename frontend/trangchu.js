@@ -92,11 +92,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const allBooks = data.books;
 
-                // --- A. LỌC SÁCH THEO VỊ TRÍ ---
-                const featuredBooks = allBooks.filter(book => book.position === 'featured');
-                const newBooks = allBooks.filter(book => book.position === 'new' || !book.position);
-                const suggestedBooks = allBooks.filter(book => book.position === 'suggested');
+       // --- A. LỌC SÁCH THEO VỊ TRÍ ---
+let featuredBooks = allBooks.filter(book => book.position === 'featured');
+// CHỮA CHÁY: Nếu không có sách nổi bật, bốc đại 4 cuốn đầu tiên
+if (featuredBooks.length === 0) {
+    featuredBooks = allBooks.slice(0, 4);
+}
 
+let newBooks = allBooks.filter(book => book.position === 'new' || !book.position);
+
+let suggestedBooks = allBooks.filter(book => book.position === 'suggested');
+// CHỮA CHÁY: Nếu không có sách gợi ý, bốc đại 5 cuốn
+if (suggestedBooks.length === 0) {
+    suggestedBooks = allBooks.slice(0, 5); 
+}
                 // --- B. VẼ SÁCH RA HTML (Giới hạn số lượng) ---
                 
                 // 1. Kệ Nổi Bật (Lấy 4 cuốn)

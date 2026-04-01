@@ -154,8 +154,9 @@ app.get('/books', (req, res) => {
         let filteredBooks = books;
 
         if (categoryQuery) {
+            // Đã sửa: dùng category_id thay vì category
             filteredBooks = filteredBooks.filter(book => 
-                book.category && book.category.toLowerCase() === categoryQuery.toLowerCase()
+                book.category_id && book.category_id.toString() === categoryQuery.toString()
             );
         }
 
