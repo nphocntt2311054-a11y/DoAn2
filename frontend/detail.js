@@ -47,12 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Đổ dữ liệu vào HTML
             document.title = `${book.title} - BookNè`; 
             
-            dom.image.src = book.imageUrl || 'https://placehold.co/400x600?text=No+Image';
+            dom.image.src = book.image_url || 'https://placehold.co/400x600?text=No+Image';
             dom.category.textContent = book.category || 'Sách hay';
             dom.title.textContent = book.title;
             dom.author.textContent = book.author;
             dom.stock.textContent = book.stock;
-            dom.price.textContent = book.price.toLocaleString('vi-VN') + ' đ';
+            dom.price.textContent = Number(book.price).toLocaleString('vi-VN') + ' đ';
             dom.desc.textContent = book.description || 'Chưa có mô tả cho cuốn sách này.';
 
         } else {

@@ -141,9 +141,9 @@ app.post('/logout', (req, res) => {
 // --- API LẤY SÁCH ---
 app.get('/books', (req, res) => {
     const searchQuery = req.query.q; 
-    const categoryQuery = req.query.category; 
+    const categoryQuery = req.query.category; // Lúc này nó sẽ nhận số '3'
 
-    const sql = "SELECT * FROM Books ORDER BY id DESC";
+    const sql = "SELECT * FROM books ORDER BY id DESC"; // Đảm bảo tên bảng khớp DB
 
     db.query(sql, [], (err, books) => {
         if (err) {
@@ -154,9 +154,9 @@ app.get('/books', (req, res) => {
         let filteredBooks = books;
 
         if (categoryQuery) {
-            // Đã sửa: dùng category_id thay vì category
+            // SỬA LẠI THÀNH category_id NHƯ TRONG DATABASE CỦA BẠN!
             filteredBooks = filteredBooks.filter(book => 
-                book.category_id && book.category_id.toString() === categoryQuery.toString()
+                book.category_id != null && String(book.category_id).trim() === String(categoryQuery).trim()
             );
         }
 

@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Vẽ sách ra (Copy logic vẽ thẻ sách từ trangchu.js sang đây)
             data.books.forEach(book => {
                 // Xử lý ảnh
-                let imageUrl = book.imageUrl || 'https://placehold.co/300x450';
+                let imageUrl = book.image_url || 'https://placehold.co/300x450';
                 if (imageUrl.startsWith('frontend/')) imageUrl = imageUrl.replace('frontend/', '');
 
                 const html = `
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <a href="detail.html?id=${book.id}">${book.title}</a>
                             </h3>
                             <p class="text-sm text-gray-500 mb-2">${book.author}</p>
-                            <p class="text-red-600 font-bold mt-auto">${book.price.toLocaleString('vi-VN')}đ</p>
+                            <p class="text-red-600 font-bold mt-auto">${Number(book.price).toLocaleString('vi-VN')}đ </p>
                         </div>
                     </div>
                 `;

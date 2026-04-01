@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </h3>
                     <p class="text-xs text-gray-500 mb-2">${book.author}</p>
                     <div class="mt-auto flex items-center justify-between">
-                         <p class="text-lg font-bold text-red-600">${book.price.toLocaleString('vi-VN')}đ</p>
+                         <p class="text-lg font-bold text-red-600">${Number(book.price).toLocaleString('vi-VN')}đ </p>
                     </div>
                 </div>
             </div>

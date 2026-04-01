@@ -20,8 +20,10 @@ async function loadBooksByCategory(categoryName, elementId) {
 
             data.books.forEach(book => {
                 // Logic sửa ảnh
-                let imageUrl = book.imageUrl || 'https://placehold.co/300x450';
-                if (imageUrl.startsWith('frontend/')) imageUrl = imageUrl.replace('frontend/', '');
+                // Sửa dòng này:
+let imageUrl = book.image_url || 'https://placehold.co/300x450'; // Đổi imageUrl thành image_url
+
+if (imageUrl.startsWith('frontend/')) imageUrl = imageUrl.replace('frontend/', '');
 
                 // Vẽ thẻ sách
                 const html = `
@@ -35,7 +37,7 @@ async function loadBooksByCategory(categoryName, elementId) {
                             </h3>
                             <p class="text-sm text-gray-500 mb-2">${book.author}</p>
                             <div class="mt-auto">
-                                <p class="text-lg font-bold text-red-600">${book.price.toLocaleString('vi-VN')}đ</p>
+                                <p class="text-lg font-bold text-red-600">${Number(book.price).toLocaleString('vi-VN')}đ </p>
                             </div>
                         </div>
                     </div>
