@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------------------------------
     function createBookCard(book) {
         // Tự động sửa đường dẫn ảnh nếu bị thừa chữ 'frontend/'
-        let imageUrl = book.imageUrl || 'https://placehold.co/300x450/e2e8f0/64748b?text=BookNè';
+        let imageUrl = book.image_url || 'https://placehold.co/300x450/e2e8f0/64748b?text=BookNè';
         if (imageUrl.startsWith('frontend/')) {
             imageUrl = imageUrl.replace('frontend/', ''); 
         }

@@ -1,373 +1,356 @@
-// 1. GỌI TẤT CẢ THƯ VIỆN LÊN ĐẦU
+// 1. IMPORT THƯ VIỆN
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session'); 
-const bcrypt = require('bcrypt'); 
-const mysql = require('mysql2'); // <-- ĐÃ ĐỔI SANG THƯ VIỆN MYSQL
+const session = require('express-session');
+const bcrypt = require('bcrypt');
+const mysql = require('mysql2/promise'); // Bản Promise tối ưu
 
-// 2. KHỞI TẠO CÁC BIẾN CHÍNH
 const app = express();
 const PORT = 3000;
-const saltRounds = 10; 
+const saltRounds = 10;
 
-// 3. KẾT NỐI DATABASE MYSQL (Thay cho file database.js cũ)
-const db = mysql.createConnection({
+// 2. KẾT NỐI DATABASE BẰNG POOL (Chống nghẽn server)
+const db = mysql.createPool({
     host: 'localhost',
     user: 'root',
-    password: '123456', 
-    database: 'webbansach' 
+    password: '123456',
+    database: 'webbansach',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect(err => {
-    if (err) {
-        console.error('❌ Lỗi kết nối MySQL:', err);
-        return;
-    }
-    console.log('✅ Đã kết nối thành công với MySQL webbansach!');
-});
+// Test kết nối
+db.getConnection()
+    .then(conn => {
+        console.log('✅ Đã kết nối thành công với MySQL webbansach (Bản Nâng Cấp)!');
+        conn.release();
+    })
+    .catch(err => console.error('❌ Lỗi kết nối MySQL:', err.message));
 
-// 4. SỬ DỤNG MIDDLEWARE (Cấu hình)
+// 3. CẤU HÌNH MIDDLEWARE
 app.use(cors({
-    origin: ['http://127.0.0.1:5501', 'http://127.0.0.1:5502', 'http://localhost:5501', 'http://localhost:5502', 'http://localhost:5173'], // T thêm sẵn cổng 5173 phòng hờ
-    credentials: true 
+    origin: ['http://127.0.0.1:5501', 'http://127.0.0.1:5502', 'http://localhost:5501', 'http://localhost:5502', 'http://localhost:5173'],
+    credentials: true
 }));
-app.use(express.json()); 
+app.use(express.json());
 
 app.use(session({
-    secret: 'mot-chuoi-bi-mat-rat-dai-va-kho-doan', 
+    secret: 'mot-chuoi-bi-mat-rat-dai-va-kho-doan',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } 
+    cookie: { secure: false }
 }));
 
-// 5. "NGƯỜI GÁC CỔNG" (Middleware Tùy chỉnh)
+// MIDDLEWARE BẢO MẬT ADMIN
 const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.isAdmin === 1) {
-        next(); 
+        next();
     } else {
-        res.status(403).json({ success: false, message: 'Yêu cầu quyền Admin.' });
+        // Đã sửa lại câu báo lỗi để bạn dễ nhận biết khi bị mất Session do Restart Server
+        res.status(403).json({ success: false, message: 'Phiên đăng nhập hết hạn do Server khởi động lại. Vui lòng ĐĂNG XUẤT và ĐĂNG NHẬP LẠI!' });
     }
 };
 
-// ========================================================
-// 6. CÁC API BÊN DƯỚI ĐÃ ĐƯỢC CHUYỂN SANG CHUẨN MYSQL
-// ========================================================
+// ==========================================
+// 4. DANH SÁCH API 
+// ==========================================
 
 app.get('/', (req, res) => {
-    res.send('Chào bạn, đây là Backend của Online Book (Bản MySQL)!');
+    res.send('Chào bạn, đây là Backend của Online Book (Bản xịn)!');
 });
 
-// --- API Về Xác thực (Auth) ---
+// --- XÁC THỰC ---
 app.post('/register', async (req, res) => {
     const { username, password, securityQuestion, securityAnswer } = req.body;
-
     if (!username || !password || !securityQuestion || !securityAnswer) {
         return res.status(400).json({ success: false, message: 'Vui lòng nhập đủ thông tin.' });
     }
 
     try {
+        const [existing] = await db.query('SELECT id FROM users WHERE username = ?', [username]);
+        if (existing.length > 0) return res.status(400).json({ success: false, message: 'Tên đăng nhập đã tồn tại.' });
+
         const hashedPassword = await bcrypt.hash(password, saltRounds);
         const hashedAnswer = await bcrypt.hash(securityAnswer, saltRounds);
 
-        const sql = `INSERT INTO Users (username, password, securityQuestion, securityAnswer) VALUES (?, ?, ?, ?)`;
-
-        db.query(sql, [username, hashedPassword, securityQuestion, hashedAnswer], (err, result) => {
-            if (err) {
-                console.error(err.message);
-                return res.status(400).json({ success: false, message: 'Tên đăng nhập đã tồn tại.' });
-            }
-            console.log(`Một user mới đã được tạo với ID: ${result.insertId}`);
-            res.json({ success: true, message: 'Đăng ký thành công!' });
-        });
-
+        await db.query(
+            `INSERT INTO users (username, password, securityQuestion, securityAnswer, role) VALUES (?, ?, ?, ?, 'user')`,
+            [username, hashedPassword, securityQuestion, hashedAnswer]
+        );
+        res.json({ success: true, message: 'Đăng ký thành công!' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
+        res.status(500).json({ success: false, message: 'Lỗi Database: ' + error.message });
     }
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    try {
+        const [results] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+        const user = results[0];
 
-    const sql = 'SELECT * FROM Users WHERE username = ?';
-    db.query(sql, [username], async (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi Database.' });
-        
-        // MySQL trả về mảng, nên lấy phần tử đầu tiên
-        const user = results[0]; 
+        if (!user) return res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
 
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
+        const match = await bcrypt.compare(password, user.password);
+        if (match) {
+            const checkAdmin = (Number(user.isAdmin) === 1 || user.role === 'admin') ? 1 : 0;
+            req.session.user = { id: user.id, username: user.username, isAdmin: checkAdmin };
+            res.json({ success: true, message: 'Đăng nhập thành công!', user: req.session.user });
+        } else {
+            res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
         }
-
-        try {
-            const match = await bcrypt.compare(password, user.password);
-
-            if (match) {
-                req.session.user = {
-                    id: user.id,
-                    username: user.username,
-                    isAdmin: user.isAdmin
-                };
-                console.log('User đã đăng nhập:', req.session.user);
-
-                res.json({ 
-                    success: true, 
-                    message: 'Đăng nhập thành công!',
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        isAdmin: user.isAdmin
-                    }
-                });
-            } else {
-                res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
-            }
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: 'Lỗi khi so sánh mật khẩu.' });
-        }
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi Database: ' + error.message });
+    }
 });
 
 app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) return res.json({ success: false, message: 'Lỗi khi đăng xuất.' });
-        res.clearCookie('connect.sid'); 
+        res.clearCookie('connect.sid');
         res.json({ success: true, message: 'Đăng xuất thành công.' });
     });
-}); 
+});
 
-// --- API LẤY SÁCH ---
-app.get('/books', (req, res) => {
-    const searchQuery = req.query.q; 
-    const categoryQuery = req.query.category; // Lúc này nó sẽ nhận số '3'
+// --- SÁCH ---
+app.get('/books', async (req, res) => {
+    const searchQuery = req.query.q;
+    const categoryQuery = req.query.category;
 
-    const sql = "SELECT * FROM books ORDER BY id DESC"; // Đảm bảo tên bảng khớp DB
-
-    db.query(sql, [], (err, books) => {
-        if (err) {
-            console.error(err.message);
-            return res.status(500).json({ success: false, message: 'Lỗi máy chủ.' });
-        }
-
+    try {
+        const [books] = await db.query("SELECT * FROM books ORDER BY id DESC");
         let filteredBooks = books;
 
         if (categoryQuery) {
-            // SỬA LẠI THÀNH category_id NHƯ TRONG DATABASE CỦA BẠN!
-            filteredBooks = filteredBooks.filter(book => 
-                book.category_id != null && String(book.category_id).trim() === String(categoryQuery).trim()
-            );
+            filteredBooks = filteredBooks.filter(book => book.category_id != null && String(book.category_id).trim() === String(categoryQuery).trim());
         }
-
         if (searchQuery) {
             const keyword = searchQuery.toLowerCase();
             filteredBooks = filteredBooks.filter(book => {
-                const titleMatch = book.title && book.title.toLowerCase().includes(keyword);
-                const authorMatch = book.author && book.author.toLowerCase().includes(keyword);
-                return titleMatch || authorMatch;
+                return (book.title && book.title.toLowerCase().includes(keyword)) || 
+                       (book.author && book.author.toLowerCase().includes(keyword));
             });
         }
-        
         res.json({ success: true, books: filteredBooks });
-    });
-});
-
-app.get('/books/:id', (req, res) => {
-    const id = req.params.id; 
-
-    const sql = "SELECT * FROM Books WHERE id = ?";
-    db.query(sql, [id], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi server.' });
-        
-        const book = results[0];
-        if (!book) return res.status(404).json({ success: false, message: 'Không tìm thấy sách.' });
-        
-        res.json({ success: true, book: book });
-    });
-});
-
-app.post('/books', (req, res) => {
-    const { title, author, category, price, description, imageUrl, stock, position } = req.body;
-
-    const sql = `INSERT INTO Books (title, author, category, price, description, imageUrl, stock, position) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-
-    const stockValue = stock ? parseInt(stock) : 1;
-    const positionValue = position || 'new'; 
-
-    db.query(sql, [title, author, category, price, description, imageUrl, stockValue, positionValue], (err, result) => {
-        if (err) return res.json({ success: false, message: err.message });
-        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId });
-    });
-});
-
-app.put('/books/:id', (req, res) => {
-    const { title, author, category, price, description, imageUrl, stock } = req.body;
-    const { id } = req.params;
-
-    const sql = `UPDATE Books SET title = ?, author = ?, category = ?, price = ?, description = ?, imageUrl = ?, stock = ? WHERE id = ?`;
-
-    db.query(sql, [title, author, category, price, description, imageUrl, stock, id], (err, result) => {
-        if (err) return res.json({ success: false, message: err.message });
-        res.json({ success: true, message: 'Cập nhật thành công!' });
-    });
-});
-
-app.delete('/admin/delete-book/:id', checkAdmin, (req, res) => {
-    const bookId = req.params.id; 
-    const sql = 'DELETE FROM Books WHERE id = ?';
-    
-    db.query(sql, [bookId], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi khi xóa sách.' });
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy sách.' });
-        }
-        res.json({ success: true, message: 'Xóa sách thành công!' });
-    });
-});
-
-// --- API ĐẶT HÀNG ---
-app.post('/order', (req, res) => {
-    const { customer_name, phone, address, total_price, items } = req.body;
-
-    if (!customer_name || !phone || !address || !items) {
-        return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin.' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ: ' + error.message });
     }
-
-    const sql = `INSERT INTO Orders (customer_name, phone, address, total_price, items) VALUES (?, ?, ?, ?, ?)`;
-    const itemsString = JSON.stringify(items);
-
-    db.query(sql, [customer_name, phone, address, total_price, itemsString], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi khi lưu đơn hàng.' });
-        res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
-    });
 });
 
-// --- CÁC API KHÁC ---
-app.get('/get-security-question/:username', (req, res) => {
-    const username = req.params.username;
-    const sql = "SELECT securityQuestion FROM Users WHERE username = ?";
-    
-    db.query(sql, [username], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi Server' });
+app.get('/books/:id', async (req, res) => {
+    try {
+        const [results] = await db.query("SELECT * FROM books WHERE id = ?", [req.params.id]);
+        if (!results[0]) return res.status(404).json({ success: false, message: 'Không tìm thấy sách.' });
+        res.json({ success: true, book: results[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server.' });
+    }
+});
+
+app.post('/books', async (req, res) => {
+    const { title, author, category, price, description, imageUrl, stock } = req.body;
+    try {
+        const [result] = await db.query(
+            `INSERT INTO books (title, author, category_id, price, description, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [title, author, category, price, description, imageUrl, stock ? parseInt(stock) : 1]
+        );
+        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+});
+
+app.put('/books/:id', async (req, res) => {
+    const { title, author, category, price, description, imageUrl, stock } = req.body;
+    try {
+        await db.query(
+            `UPDATE books SET title = ?, author = ?, category_id = ?, price = ?, description = ?, image_url = ?, stock = ? WHERE id = ?`,
+            [title, author, category, price, description, imageUrl, stock, req.params.id]
+        );
+        res.json({ success: true, message: 'Cập nhật thành công!' });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+});
+
+app.delete('/admin/delete-book/:id', checkAdmin, async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM books WHERE id = ?', [req.params.id]);
+        if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy sách.' });
+        res.json({ success: true, message: 'Xóa sách thành công!' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi khi xóa sách.' });
+    }
+});
+
+// --- ĐƠN HÀNG ---
+app.post('/order', async (req, res) => {
+    const { customer_name, phone, address, total_price, items } = req.body;
+    if (!customer_name || !phone || !address || !items) return res.status(400).json({ success: false, message: 'Vui lòng điền đủ thông tin.' });
+    try {
+        const [result] = await db.query(
+            `INSERT INTO orders (customer_name, phone, address, total_price, items) VALUES (?, ?, ?, ?, ?)`,
+            [customer_name, phone, address, total_price, JSON.stringify(items)]
+        );
+        res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/checkout', async (req, res) => {
+    const { user_id, customer_name, phone, address, items, total_price } = req.body;
+    try {
+        const [result] = await db.query(
+            `INSERT INTO orders (user_id, customer_name, phone, address, items, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'Đang xử lý')`,
+            [user_id, customer_name, phone, address, JSON.stringify(items), total_price]
+        );
+        res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+});
+
+app.get('/my-orders/:userId', async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC", [req.params.userId]);
+        res.json({ success: true, orders: rows });
+    } catch (error) {
+        res.json({ success: false, message: 'Lỗi lấy dữ liệu' });
+    }
+});
+
+app.get('/admin/orders', checkAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT * FROM orders ORDER BY id DESC");
+        res.json({ success: true, orders: rows });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server' });
+    }
+});
+
+// ROUTE QUAN TRỌNG: CẬP NHẬT TRẠNG THÁI (ĐÃ BẢO VỆ CHỐNG LỖI [OBJECT OBJECT])
+app.put('/admin/orders/:id', async (req, res) => {
+    const orderId = req.params.id;
+    const { status: newStatus } = req.body; 
+
+    try {
+        const [orders] = await db.query('SELECT status, items FROM orders WHERE id = ?', [orderId]);
+        if (orders.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng" });
         
-        const row = results[0];
-        if (row) {
-            const question = row.securityQuestion || "Bạn chưa thiết lập câu hỏi bảo mật.";
-            res.json({ success: true, question: question });
+        const order = orders[0];
+        const oldStatus = order.status;
+
+        // Xử lý chống văng lỗi nếu DB lỡ lưu dạng chuỗi bậy bạ
+        let items = [];
+        try {
+            if (typeof order.items === 'string') {
+                if (order.items === '[object Object]') items = [];
+                else items = JSON.parse(order.items);
+            } else {
+                items = order.items || [];
+            }
+        } catch (e) {
+            console.error("Lỗi parse items tại Backend:", e);
+            items = [];
+        }
+
+        // Logic cộng lại kho nếu trạng thái mới là 'Trả hàng', 'Hủy đơn' hoặc 'Đã hủy'
+        if ((newStatus === 'Trả hàng' || newStatus === 'Đã hủy' || newStatus === 'Hủy đơn') && 
+            (oldStatus !== 'Trả hàng' && oldStatus !== 'Đã hủy' && oldStatus !== 'Hủy đơn')) {
+            
+            for (const item of items) {
+                if(item.id) {
+                    await db.query(
+                        'UPDATE books SET stock = stock + ? WHERE id = ?',
+                        [item.quantity || 1, item.id]
+                    );
+                }
+            }
+            console.log(`Đã hoàn kho cho đơn #${orderId}`);
+        }
+
+        // Cập nhật trạng thái
+        await db.query('UPDATE orders SET status = ? WHERE id = ?', [newStatus, orderId]);
+
+        res.json({ success: true, message: "Cập nhật trạng thái thành công" });
+    } catch (error) {
+        console.error("Lỗi cập nhật đơn hàng:", error);
+        res.status(500).json({ success: false, message: "Lỗi Server nội bộ" });
+    }
+});
+
+// --- TÀI KHOẢN & BẢO MẬT ---
+app.get('/get-security-question/:username', async (req, res) => {
+    try {
+        const [results] = await db.query("SELECT securityQuestion FROM users WHERE username = ?", [req.params.username]);
+        if (results[0]) {
+            res.json({ success: true, question: results[0].securityQuestion || "Bạn chưa thiết lập câu hỏi bảo mật." });
         } else {
             res.json({ success: false, message: 'Tài khoản không tồn tại!' });
         }
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi Server' });
+    }
 });
 
-app.post('/reset-password', (req, res) => {
+app.post('/reset-password', async (req, res) => {
     const { username, answer, newPassword } = req.body;
-
-    const sqlGet = "SELECT * FROM Users WHERE username = ?";
-    db.query(sqlGet, [username], async (err, results) => {
+    try {
+        const [results] = await db.query("SELECT * FROM users WHERE username = ?", [username]);
         const user = results[0];
-        if (err || !user) return res.json({ success: false, message: 'Lỗi hệ thống hoặc sai tên đăng nhập.' });
         
+        if (!user) return res.json({ success: false, message: 'Tài khoản không tồn tại.' });
+
         if (user.securityAnswer && user.securityAnswer.toLowerCase() === answer.trim().toLowerCase()) {
-            try {
-                const hashedPassword = await bcrypt.hash(newPassword, 10);
-                const sqlUpdate = "UPDATE Users SET password = ? WHERE id = ?";
-                db.query(sqlUpdate, [hashedPassword, user.id], (err) => {
-                    if (err) return res.json({ success: false, message: 'Lỗi Update DB' });
-                    res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
-                });
-            } catch (error) {
-                res.status(500).json({ success: false, message: 'Lỗi mã hóa mật khẩu.' });
-            }
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            await db.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, user.id]);
+            res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
         } else {
             res.json({ success: false, message: 'Câu trả lời bảo mật không đúng!' });
         }
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi hệ thống.' });
+    }
 });
 
-app.post('/checkout', (req, res) => {
-    const { user_id, customer_name, phone, address, items, total_price } = req.body;
-    const itemsString = JSON.stringify(items); 
-    const sql = `INSERT INTO Orders (user_id, customer_name, phone, address, items, total_price, status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    const status = 'Đang xử lý';
-    
-    db.query(sql, [user_id, customer_name, phone, address, itemsString, total_price, status], (err, result) => {
-        if (err) return res.json({ success: false, message: 'Lỗi lưu đơn hàng' });
-        res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
-    });
+app.get('/users', checkAdmin, async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT id, username, role FROM users ORDER BY id DESC");
+        const mappedUsers = rows.map(u => ({ id: u.id, username: u.username, isAdmin: u.role === 'admin' ? 1 : 0 }));
+        res.json({ success: true, users: mappedUsers });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server.' });
+    }
 });
 
-app.get('/my-orders/:userId', (req, res) => {
-    const userId = req.params.userId;
-    const sql = "SELECT * FROM Orders WHERE user_id = ? ORDER BY id DESC";
-    db.query(sql, [userId], (err, rows) => {
-        if (err) return res.json({ success: false, message: 'Lỗi lấy dữ liệu' });
-        res.json({ success: true, orders: rows });
-    });
-});
-
-app.get('/users', checkAdmin, (req, res) => {
-    const sql = "SELECT id, username, isAdmin FROM Users ORDER BY id DESC";
-    db.query(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi server.' });
-        res.json({ success: true, users: rows });
-    });
-});
-
-app.delete('/users/:id', checkAdmin, (req, res) => {
-    const idToDelete = req.params.id;
-    const currentAdminId = req.session.user.id; 
-
-    if (parseInt(idToDelete) === parseInt(currentAdminId)) {
+app.delete('/users/:id', checkAdmin, async (req, res) => {
+    if (parseInt(req.params.id) === parseInt(req.session.user.id)) {
         return res.status(400).json({ success: false, message: 'Bạn không thể tự xóa tài khoản của chính mình!' });
     }
-
-    const sql = "DELETE FROM Users WHERE id = ?";
-    db.query(sql, [idToDelete], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi server.' });
+    try {
+        await db.query("DELETE FROM users WHERE id = ?", [req.params.id]);
         res.json({ success: true, message: 'Đã xóa người dùng thành công.' });
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server.' });
+    }
 });
 
-app.put('/users/role/:id', checkAdmin, (req, res) => {
-    const targetId = req.params.id;
-    const { isAdmin } = req.body; 
-    const currentAdminId = req.session.user.id;
-
-    if (parseInt(targetId) === parseInt(currentAdminId)) {
+app.put('/users/role/:id', checkAdmin, async (req, res) => {
+    if (parseInt(req.params.id) === parseInt(req.session.user.id)) {
         return res.status(400).json({ success: false, message: 'Bạn không thể tự thay đổi quyền của chính mình!' });
     }
-
-    const sql = "UPDATE Users SET isAdmin = ? WHERE id = ?";
-    db.query(sql, [isAdmin, targetId], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi server.' });
+    try {
+        const newRole = req.body.isAdmin ? 'admin' : 'user';
+        await db.query("UPDATE users SET role = ? WHERE id = ?", [newRole, req.params.id]);
         res.json({ success: true, message: 'Cập nhật quyền thành công!' });
-    });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Lỗi server.' });
+    }
 });
 
-app.get('/admin/orders', checkAdmin, (req, res) => {
-    const sql = "SELECT * FROM Orders ORDER BY id DESC";
-    db.query(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi server' });
-        res.json({ success: true, orders: rows });
-    });
-});
-
-app.put('/admin/orders/:id', checkAdmin, (req, res) => {
-    const orderId = req.params.id;
-    const { status } = req.body; 
-
-    const sql = "UPDATE Orders SET status = ? WHERE id = ?";
-    db.query(sql, [status, orderId], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: 'Lỗi update status' });
-        res.json({ success: true, message: 'Cập nhật trạng thái thành công!' });
-    });
-});
-
-// 7. KHỞI ĐỘNG MÁY CHỦ
+// 5. KHỞI ĐỘNG
 app.listen(PORT, () => {
     console.log(`🚀 Máy chủ Backend đang chạy rần rần tại http://localhost:${PORT}`);
 });
