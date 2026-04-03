@@ -23,7 +23,7 @@ const db = mysql.createPool({
 // Test kết nối
 db.getConnection()
     .then(conn => {
-        console.log('✅ Đã kết nối thành công với MySQL webbansach (Bản Nâng Cấp)!');
+        console.log('✅ Đã kết nối thành công với MySQL webbansach!');
         conn.release();
     })
     .catch(err => console.error('❌ Lỗi kết nối MySQL:', err.message));
@@ -47,7 +47,6 @@ const checkAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.isAdmin === 1) {
         next();
     } else {
-        // Đã sửa lại câu báo lỗi để bạn dễ nhận biết khi bị mất Session do Restart Server
         res.status(403).json({ success: false, message: 'Phiên đăng nhập hết hạn do Server khởi động lại. Vui lòng ĐĂNG XUẤT và ĐĂNG NHẬP LẠI!' });
     }
 };
@@ -183,16 +182,40 @@ app.delete('/admin/delete-book/:id', checkAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi khi xóa sách.' });
     }
 });
+// API Cập nhật số lượng tồn kho của sách
+app.put('/admin/update-book/:id', (req, res) => {
+    const bookId = req.params.id;
+    const newStock = req.body.stock; // Số lượng mới gửi từ Frontend lên
 
-// --- ĐƠN HÀNG ---
+    const sql = "UPDATE books SET stock = ? WHERE id = ?";
+    db.query(sql, [newStock, bookId], (err, result) => {
+        if (err) {
+            console.error("Lỗi cập nhật kho:", err);
+            return res.json({ success: false, message: "Lỗi Database khi cập nhật kho" });
+        }
+        return res.json({ success: true, message: "Cập nhật kho thành công!" });
+    });
+});
+// --- ĐƠN HÀNG (ĐÃ THÊM LOGIC TRỪ KHO KHI MUA) ---
 app.post('/order', async (req, res) => {
     const { customer_name, phone, address, total_price, items } = req.body;
     if (!customer_name || !phone || !address || !items) return res.status(400).json({ success: false, message: 'Vui lòng điền đủ thông tin.' });
     try {
         const [result] = await db.query(
-            `INSERT INTO orders (customer_name, phone, address, total_price, items) VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO orders (customer_name, phone, address, total_price, items, status) VALUES (?, ?, ?, ?, ?, 'Đang xử lý')`,
             [customer_name, phone, address, total_price, JSON.stringify(items)]
         );
+
+        // THÊM: TRỪ TỒN KHO
+        if (Array.isArray(items)) {
+            for (const item of items) {
+                if (item.id) {
+                    const qty = item.quantity ? parseInt(item.quantity) : 1;
+                    await db.query("UPDATE books SET stock = stock - ? WHERE id = ?", [qty, item.id]);
+                }
+            }
+        }
+
         res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -206,6 +229,17 @@ app.post('/checkout', async (req, res) => {
             `INSERT INTO orders (user_id, customer_name, phone, address, items, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'Đang xử lý')`,
             [user_id, customer_name, phone, address, JSON.stringify(items), total_price]
         );
+
+        // THÊM: TRỪ TỒN KHO
+        if (Array.isArray(items)) {
+            for (const item of items) {
+                if (item.id) {
+                    const qty = item.quantity ? parseInt(item.quantity) : 1;
+                    await db.query("UPDATE books SET stock = stock - ? WHERE id = ?", [qty, item.id]);
+                }
+            }
+        }
+
         res.json({ success: true, message: 'Đặt hàng thành công!', orderId: result.insertId });
     } catch (error) {
         res.json({ success: false, message: error.message });
@@ -230,7 +264,7 @@ app.get('/admin/orders', checkAdmin, async (req, res) => {
     }
 });
 
-// ROUTE QUAN TRỌNG: CẬP NHẬT TRẠNG THÁI (ĐÃ BẢO VỆ CHỐNG LỖI [OBJECT OBJECT])
+// API CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (ĐÃ FIX LỖI PROMISE & THÊM LOGIC CỘNG LẠI KHO KHI HỦY)
 app.put('/admin/orders/:id', async (req, res) => {
     const orderId = req.params.id;
     const { status: newStatus } = req.body; 
@@ -242,7 +276,7 @@ app.put('/admin/orders/:id', async (req, res) => {
         const order = orders[0];
         const oldStatus = order.status;
 
-        // Xử lý chống văng lỗi nếu DB lỡ lưu dạng chuỗi bậy bạ
+        // Xử lý an toàn JSON
         let items = [];
         try {
             if (typeof order.items === 'string') {
@@ -253,25 +287,21 @@ app.put('/admin/orders/:id', async (req, res) => {
             }
         } catch (e) {
             console.error("Lỗi parse items tại Backend:", e);
-            items = [];
         }
 
-        // Logic cộng lại kho nếu trạng thái mới là 'Trả hàng', 'Hủy đơn' hoặc 'Đã hủy'
+        // CỘNG LẠI KHO nếu chuyển sang Hủy hoặc Trả hàng
         if ((newStatus === 'Trả hàng' || newStatus === 'Đã hủy' || newStatus === 'Hủy đơn') && 
             (oldStatus !== 'Trả hàng' && oldStatus !== 'Đã hủy' && oldStatus !== 'Hủy đơn')) {
             
             for (const item of items) {
                 if(item.id) {
-                    await db.query(
-                        'UPDATE books SET stock = stock + ? WHERE id = ?',
-                        [item.quantity || 1, item.id]
-                    );
+                    const qty = item.quantity ? parseInt(item.quantity) : 1;
+                    await db.query('UPDATE books SET stock = stock + ? WHERE id = ?', [qty, item.id]);
                 }
             }
-            console.log(`Đã hoàn kho cho đơn #${orderId}`);
         }
 
-        // Cập nhật trạng thái
+        // Cập nhật trạng thái vào database
         await db.query('UPDATE orders SET status = ? WHERE id = ?', [newStatus, orderId]);
 
         res.json({ success: true, message: "Cập nhật trạng thái thành công" });
