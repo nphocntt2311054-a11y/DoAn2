@@ -182,20 +182,38 @@ app.delete('/admin/delete-book/:id', checkAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi khi xóa sách.' });
     }
 });
-// API Cập nhật số lượng tồn kho của sách
-app.put('/admin/update-book/:id', (req, res) => {
+
+// API Cập nhật số lượng tồn kho của sách (Đã chuẩn hóa Promise)
+app.put('/admin/update-book/:id', async (req, res) => {
     const bookId = req.params.id;
     const newStock = req.body.stock; // Số lượng mới gửi từ Frontend lên
 
-    const sql = "UPDATE books SET stock = ? WHERE id = ?";
-    db.query(sql, [newStock, bookId], (err, result) => {
-        if (err) {
-            console.error("Lỗi cập nhật kho:", err);
-            return res.json({ success: false, message: "Lỗi Database khi cập nhật kho" });
-        }
-        return res.json({ success: true, message: "Cập nhật kho thành công!" });
-    });
+    try {
+        const sql = "UPDATE books SET stock = ? WHERE id = ?";
+        await db.query(sql, [newStock, bookId]);
+        res.json({ success: true, message: "Cập nhật kho thành công!" });
+    } catch (error) {
+        console.error("Lỗi cập nhật kho:", error);
+        res.json({ success: false, message: "Lỗi Database khi cập nhật kho" });
+    }
 });
+
+// API SỬA THÔNG TIN SÁCH (Đã chuẩn hóa Promise)
+app.put('/admin/edit-book/:id', async (req, res) => {
+    const bookId = req.params.id;
+    const { title, author, price } = req.body; 
+    
+    try {
+        const sql = "UPDATE books SET title = ?, author = ?, price = ? WHERE id = ?";
+        await db.query(sql, [title, author, price, bookId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Lỗi khi cập nhật sách:", error);
+        res.json({ success: false, message: "Lỗi khi cập nhật sách" });
+    }
+});
+
+
 // --- ĐƠN HÀNG (ĐÃ THÊM LOGIC TRỪ KHO KHI MUA) ---
 app.post('/order', async (req, res) => {
     const { customer_name, phone, address, total_price, items } = req.body;
