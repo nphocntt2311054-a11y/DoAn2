@@ -4,10 +4,40 @@ const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise'); // Bản Promise tối ưu
+// --- THÊM 3 THƯ VIỆN ĐỂ XỬ LÝ ẢNH UPLOAD ---
+const multer = require('multer'); 
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = 3000;
 const saltRounds = 10;
+
+// ==========================================
+// CẤU HÌNH UPLOAD ẢNH BẰNG MULTER
+// ==========================================
+// Tạo thư mục 'uploads' tự động nếu nó chưa có
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
+// Mở cửa cho Frontend có thể load ảnh từ thư mục uploads này (rất quan trọng)
+app.use('/uploads', express.static(uploadDir));
+
+// Cấu hình Multer để nó biết lưu file ở đâu và đổi tên file
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/') // Lưu vào thư mục uploads
+    },
+    filename: function (req, file, cb) {
+        // Đổi tên file thành Timestamp để không bao giờ bị trùng tên
+        cb(null, Date.now() + path.extname(file.originalname)) 
+    }
+});
+const upload = multer({ storage: storage });
+// ==========================================
+
 
 // 2. KẾT NỐI DATABASE BẰNG POOL (Chống nghẽn server)
 const db = mysql.createPool({
@@ -147,18 +177,29 @@ app.get('/books/:id', async (req, res) => {
     }
 });
 
-app.post('/books', async (req, res) => {
-    const { title, author, category, price, description, imageUrl, stock } = req.body;
+
+// ==========================================
+// ĐÃ FIX: API THÊM SÁCH CÓ UPLOAD ẢNH TỪ MÁY
+// ==========================================
+// Thêm middleware upload.single('imageFile') để nó bắt file từ Frontend
+app.post('/books', upload.single('imageFile'), async (req, res) => {
+    // Vì dùng FormData nên dữ liệu sẽ nằm trong req.body, file nằm trong req.file
+    const { title, author, category, price, description, stock } = req.body;
+    
+    // Nếu có file up lên thì dùng đường dẫn file, nếu không thì để trống hoặc dùng default
+    const finalImageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+
     try {
         const [result] = await db.query(
             `INSERT INTO books (title, author, category_id, price, description, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [title, author, category, price, description, imageUrl, stock ? parseInt(stock) : 1]
+            [title, author, category, price, description, finalImageUrl, stock ? parseInt(stock) : 1]
         );
-        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId });
+        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId, imageUrl: finalImageUrl });
     } catch (error) {
         res.json({ success: false, message: error.message });
     }
 });
+
 
 app.put('/books/:id', async (req, res) => {
     const { title, author, category, price, description, imageUrl, stock } = req.body;
@@ -198,7 +239,7 @@ app.put('/admin/update-book/:id', async (req, res) => {
     }
 });
 
-// API SỬA THÔNG TIN SÁCH (Đã chuẩn hóa Promise)
+// API SỬA THÔNG TIN SÁCH 
 app.put('/admin/edit-book/:id', async (req, res) => {
     const bookId = req.params.id;
     const { title, author, price } = req.body; 
@@ -214,17 +255,35 @@ app.put('/admin/edit-book/:id', async (req, res) => {
 });
 
 
-// --- ĐƠN HÀNG (ĐÃ THÊM LOGIC TRỪ KHO KHI MUA) ---
+// --- ĐƠN HÀNG KHÁCH VÃNG LAI ---
 app.post('/order', async (req, res) => {
     const { customer_name, phone, address, total_price, items } = req.body;
     if (!customer_name || !phone || !address || !items) return res.status(400).json({ success: false, message: 'Vui lòng điền đủ thông tin.' });
+    
     try {
+        // 1. KIỂM TRA TỒN KHO TRƯỚC (CHỐNG MUA LỐ)
+        if (Array.isArray(items)) {
+            for (const item of items) {
+                const [bookInfo] = await db.query("SELECT stock, title FROM books WHERE id = ?", [item.id]);
+                const currentStock = bookInfo[0]?.stock || 0;
+                const qtyToBuy = item.quantity ? parseInt(item.quantity) : 1;
+
+                if (qtyToBuy > currentStock) {
+                    return res.json({ 
+                        success: false, 
+                        message: `Lỗi: Sách "${bookInfo[0].title}" chỉ còn ${currentStock} quyển trong kho!` 
+                    });
+                }
+            }
+        }
+
+        // 2. NẾU ĐỦ KHO -> LƯU ĐƠN HÀNG
         const [result] = await db.query(
             `INSERT INTO orders (customer_name, phone, address, total_price, items, status) VALUES (?, ?, ?, ?, ?, 'Đang xử lý')`,
             [customer_name, phone, address, total_price, JSON.stringify(items)]
         );
 
-        // THÊM: TRỪ TỒN KHO
+        // 3. TRỪ TỒN KHO
         if (Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {
@@ -240,15 +299,33 @@ app.post('/order', async (req, res) => {
     }
 });
 
+// --- ĐƠN HÀNG USER ĐÃ ĐĂNG NHẬP ---
 app.post('/checkout', async (req, res) => {
     const { user_id, customer_name, phone, address, items, total_price } = req.body;
     try {
+        // 1. KIỂM TRA TỒN KHO TRƯỚC (CHỐNG MUA LỐ)
+        if (Array.isArray(items)) {
+            for (const item of items) {
+                const [bookInfo] = await db.query("SELECT stock, title FROM books WHERE id = ?", [item.id]);
+                const currentStock = bookInfo[0]?.stock || 0;
+                const qtyToBuy = item.quantity ? parseInt(item.quantity) : 1;
+
+                if (qtyToBuy > currentStock) {
+                    return res.json({ 
+                        success: false, 
+                        message: `Lỗi: Sách "${bookInfo[0].title}" chỉ còn ${currentStock} quyển trong kho!` 
+                    });
+                }
+            }
+        }
+
+        // 2. NẾU ĐỦ KHO -> LƯU ĐƠN HÀNG
         const [result] = await db.query(
             `INSERT INTO orders (user_id, customer_name, phone, address, items, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'Đang xử lý')`,
             [user_id, customer_name, phone, address, JSON.stringify(items), total_price]
         );
 
-        // THÊM: TRỪ TỒN KHO
+        // 3. TRỪ TỒN KHO
         if (Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {
