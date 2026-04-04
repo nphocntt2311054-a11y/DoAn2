@@ -58,12 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
             contentBooks.classList.remove('hidden');
             tabBooksBtn.classList.add('active', 'text-emerald-600', 'border-emerald-600');
             loadBooks();
-        } 
+        }
         else if (tabName === 'users' && contentUsers && tabUsersBtn) {
             contentUsers.classList.remove('hidden');
             tabUsersBtn.classList.add('active', 'text-emerald-600', 'border-emerald-600');
             loadUsers();
-        } 
+        }
         else if (tabName === 'orders' && contentOrders && tabOrdersBtn) {
             contentOrders.classList.remove('hidden');
             tabOrdersBtn.classList.add('active', 'text-emerald-600', 'border-emerald-600');
@@ -78,9 +78,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     // 3. QUẢN LÝ SÁCH 
     // ============================================================
-    window.allBooksList = []; 
-
+    window.allBooksList = [];
     const bookListDiv = document.getElementById('book-list');
+
+    // HÀM XỬ LÝ ẢNH THÔNG MINH (Đặt ngay đây)
+    function getValidImageUrl(url) {
+        if (!url || url.trim() === '') return 'https://placehold.co/100x150?text=No+Image';
+        
+        // 1. Nếu là link mạng hoặc ảnh mới upload (đã có sẵn http://127.0.0.1...) -> Giữ nguyên
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        
+        // 2. Nếu là file upload cũ đang lưu dạng '/uploads/...' -> Ghép với link Backend
+        if (url.startsWith('/uploads/') || url.startsWith('uploads/')) {
+            const cleanPath = url.startsWith('/') ? url : `/${url}`;
+            return `http://127.0.0.1:3000${cleanPath}`;
+        }
+
+        // 3. CÒN LẠI: Chính là các ảnh cũ nằm ở Frontend (VD: 'image/sach1.png') -> Giữ nguyên để Frontend tự load
+        return url;
+    }
 
     async function loadBooks() {
         if (!bookListDiv) return;
@@ -88,25 +106,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('http://127.0.0.1:3000/books', { credentials: 'include' });
             const data = await response.json();
             if (data.success) {
-                
-                window.allBooksList = data.books; 
 
+                window.allBooksList = data.books;
                 bookListDiv.innerHTML = '';
+                
                 data.books.forEach(book => {
-                    // Cấp phát link ảnh (ĐÃ SỬA CHỖ NÀY ĐỂ NHẬN DIỆN ĐÚNG LINK VÀ CHỐNG LỖI)
-                    let imgUrl = 'https://placehold.co/100x150?text=No+Image';
-                    if (book.image_url && book.image_url.trim() !== '') {
-                        if (book.image_url.startsWith('http://') || book.image_url.startsWith('https://')) {
-                            imgUrl = book.image_url; // Link từ mạng thì giữ nguyên
-                        } else {
-                            // Link up từ máy thì ghép với server (chống dư dấu /)
-                            const cleanPath = book.image_url.startsWith('/') ? book.image_url : `/${book.image_url}`;
-                            imgUrl = `http://127.0.0.1:3000${cleanPath}`;
-                        }
-                    }
+                    // Gọi hàm xử lý ảnh thông minh ở đây
+                    const dbImage = book.image_url || book.imageUrl;
+                    const imgUrl = getValidImageUrl(dbImage);
 
                     const item = document.createElement('div');
-                    item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm gap-4'; 
+                    item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm gap-4';
                     item.innerHTML = `
                         <div class="w-12 h-16 shrink-0 bg-gray-100 rounded overflow-hidden border">
                             <img src="${imgUrl}" class="w-full h-full object-cover" alt="Ảnh sách" onerror="this.src='https://placehold.co/100x150?text=Lỗi+Ảnh'">
@@ -129,28 +139,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 3.5. XỬ LÝ FORM THÊM SÁCH (ĐÃ MAP CHUẨN ID HTML CỦA BẠN)
+    // 3.5. XỬ LÝ FORM THÊM SÁCH
     // ============================================================
-    const formAddBook = document.getElementById('add-book-form'); // Trùng khớp hoàn toàn với HTML
-    if (formAddBook) {
+    const formAddBook = document.getElementById('add-book-form'); 
+    if (formAddBook) { // Đã sửa từ if (addBookForm) thành if (formAddBook) để tránh lỗi đỏ
         formAddBook.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const formData = new FormData();
             
-            // Map chính xác từng trường ID theo đúng HTML bạn gửi
+            const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
             formData.append('author', document.getElementById('author').value);
             formData.append('category', document.getElementById('category').value);
-            formData.append('position', document.getElementById('book-position').value);
             formData.append('price', document.getElementById('price').value);
-            formData.append('stock', document.getElementById('stock').value);
+            formData.append('stock', document.getElementById('stock').value || 1);
             formData.append('description', document.getElementById('description').value);
+            
+            // Xử lý position nếu có trên HTML của bạn
+            const positionEl = document.getElementById('book-position');
+            if (positionEl) formData.append('position', positionEl.value);
 
-            // Bắt ID file ảnh chuẩn xác
-            const imageInput = document.getElementById('add-image_file'); 
-            if (imageInput && imageInput.files.length > 0) {
-                formData.append('imageFile', imageInput.files[0]); // Đảm bảo server.js của bạn nhận 'imageFile'
+            // Bắt ID theo đúng 2 nút trên giao diện html
+            const imageFileInput = document.getElementById('imageFile');
+            const imageUrlInput = document.getElementById('imageUrl');
+
+            if (imageFileInput && imageFileInput.files.length > 0) {
+                formData.append('imageFile', imageFileInput.files[0]);
+            } else if (imageUrlInput && imageUrlInput.value) {
+                formData.append('imageUrl', imageUrlInput.value);
             }
 
             try {
@@ -159,19 +174,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: formData, 
                     credentials: 'include'
                 });
-                const data = await res.json();
-
-                if (data.success) {
-                    alert('✅ Thêm sách và upload ảnh thành công!');
-                    formAddBook.reset(); 
-                    loadBooks(); 
+                const result = await res.json();
+                if (result.success) {
+                    alert("Thêm sách thành công!");
+                    formAddBook.reset(); // Đã sửa tên biến
+                    loadBooks();
                 } else {
-                    alert('❌ Lỗi: ' + data.message);
+                    alert("Lỗi: " + result.message);
                 }
-            } catch (err) {
-                console.error("Lỗi thêm sách:", err);
-                alert("Lỗi kết nối Server khi thêm sách!");
-            }
+            } catch (err) { alert("Lỗi kết nối server."); }
         });
     }
 
@@ -188,16 +199,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 userBody.innerHTML = '';
                 data.users.forEach(u => {
                     const isAdmin = u.isAdmin === 1;
-                    const roleBadge = isAdmin 
+                    const roleBadge = isAdmin
                         ? `<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold">Admin</span>`
                         : `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">Khách</span>`;
-                    
-                    let actions = u.username === 'admin' 
+
+                    let actions = u.username === 'admin'
                         ? `<span class="text-xs text-gray-400 italic">🔒 Super Admin</span>`
-                        : (isAdmin 
+                        : (isAdmin
                             ? `<button onclick="toggleRole(${u.id}, '${u.username}', 0)" class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded mr-2">⬇️ Giáng chức</button>`
                             : `<button onclick="toggleRole(${u.id}, '${u.username}', 1)" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded mr-2">⬆️ Thăng chức</button>`)
-                          + `<button onclick="deleteUser(${u.id}, '${u.username}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Xóa</button>`;
+                        + `<button onclick="deleteUser(${u.id}, '${u.username}')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Xóa</button>`;
 
                     userBody.innerHTML += `
                         <tr class="border-b hover:bg-gray-50">
@@ -241,12 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             else items = JSON.parse(items);
                         }
                         if (Array.isArray(items) && items.length > 0) {
-                            itemsHtml = items.map(i => `<div class="text-xs border-b border-gray-100 py-1">• ${i.title} <span class="font-bold text-gray-500">x${i.quantity||1}</span></div>`).join('');
+                            itemsHtml = items.map(i => `<div class="text-xs border-b border-gray-100 py-1">• ${i.title} <span class="font-bold text-gray-500">x${i.quantity || 1}</span></div>`).join('');
                         } else {
                             itemsHtml = '<span class="text-gray-400 text-xs italic">Chưa rõ sản phẩm</span>';
                         }
-                    } catch (e) { 
-                        itemsHtml = '<span class="text-red-400 text-xs italic">Lỗi dữ liệu</span>'; 
+                    } catch (e) {
+                        itemsHtml = '<span class="text-red-400 text-xs italic">Lỗi dữ liệu</span>';
                     }
 
                     const statusColors = {
@@ -257,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Hủy đơn': 'bg-red-100 text-red-800',
                         'Trả hàng': 'bg-purple-100 text-purple-800'
                     };
-                    
+
                     const isLocked = order.status === 'Đã hủy' || order.status === 'Hủy đơn' || order.status === 'Trả hàng';
 
                     orderBody.innerHTML += `
@@ -292,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 orderBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-bold">Lỗi: ${data.message}</td></tr>`;
             }
-        } catch (e) { 
+        } catch (e) {
             console.error("Lỗi Fetch:", e);
             orderBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-bold bg-red-50">❌ Lỗi kết nối Server! Vui lòng bật file server.js và kiểm tra đúng Port.</td></tr>`;
         }
@@ -302,9 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. CÁC HÀM GLOBAL (Dùng cho các nút bấm)
     // ============================================================
     window.updateOrderStatus = async (id, newStatus, currentStatus) => {
-        if(!confirm(`Xác nhận đổi trạng thái đơn #${id} thành "${newStatus}"?`)) { 
-            loadOrders(); 
-            return; 
+        if (!confirm(`Xác nhận đổi trạng thái đơn #${id} thành "${newStatus}"?`)) {
+            loadOrders();
+            return;
         }
         try {
             const res = await fetch(`http://127.0.0.1:3000/admin/orders/${id}`, {
@@ -316,21 +327,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (data.success) {
                 alert("Đã cập nhật trạng thái thành công!");
-                loadOrders(); 
+                loadOrders();
             } else { alert("Lỗi từ server: " + data.message); }
         } catch (e) { alert("Không thể kết nối đến Server!"); }
     };
 
-    window.deleteBook = async (id) => { 
-        if(confirm("Xóa sách này?")) { 
-            await fetch(`http://127.0.0.1:3000/admin/delete-book/${id}`, { method: 'DELETE', credentials: 'include' }); 
-            loadBooks(); 
-        } 
+    window.deleteBook = async (id) => {
+        if (confirm("Xóa sách này?")) {
+            await fetch(`http://127.0.0.1:3000/admin/delete-book/${id}`, { method: 'DELETE', credentials: 'include' });
+            loadBooks();
+        }
     };
 
     window.updateStock = async (id, currentStock) => {
         const addAmountStr = prompt(`Sách này đang có ${currentStock} cuốn.\nBạn muốn nhập thêm bao nhiêu cuốn về kho?`, "10");
-        if (addAmountStr === null || addAmountStr.trim() === "") return; 
+        if (addAmountStr === null || addAmountStr.trim() === "") return;
 
         const addAmount = parseInt(addAmountStr);
         if (isNaN(addAmount) || addAmount <= 0) {
@@ -358,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ============================================================
     window.editBook = (id) => {
         const book = window.allBooksList.find(b => b.id === id);
-        
+
         if (!book) return alert("Không tìm thấy sách. Vui lòng tải lại trang!");
 
         const modalHtml = `
@@ -392,8 +403,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         document.getElementById('form-edit-book').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            
+            e.preventDefault();
+
             const updatedData = {
                 title: document.getElementById('edit-title').value,
                 author: document.getElementById('edit-author').value,
@@ -411,19 +422,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await updateRes.json();
                 if (result.success) {
                     alert("✅ Sửa thông tin thành công!");
-                    document.getElementById('edit-modal').remove(); 
-                    loadBooks(); 
+                    document.getElementById('edit-modal').remove();
+                    loadBooks();
                 } else {
                     alert("❌ Lỗi: " + result.message);
                 }
-            } catch(err) {
+            } catch (err) {
                 alert("Lỗi kết nối khi lưu!");
             }
         });
     };
 
-    window.deleteUser = async (id, name) => { if(confirm(`Xóa ${name}?`)) { const res = await fetch(`http://127.0.0.1:3000/users/${id}`, { method: 'DELETE', credentials: 'include' }); loadUsers(); } };
-    window.toggleRole = async (id, name, role) => { if(confirm("Đổi quyền?")) { await fetch(`http://127.0.0.1:3000/users/role/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ isAdmin: role }), credentials: 'include' }); loadUsers(); } };
+    window.deleteUser = async (id, name) => { if (confirm(`Xóa ${name}?`)) { const res = await fetch(`http://127.0.0.1:3000/users/${id}`, { method: 'DELETE', credentials: 'include' }); loadUsers(); } };
+    window.toggleRole = async (id, name, role) => { if (confirm("Đổi quyền?")) { await fetch(`http://127.0.0.1:3000/users/role/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isAdmin: role }), credentials: 'include' }); loadUsers(); } };
 
     switchTab('books');
 });
