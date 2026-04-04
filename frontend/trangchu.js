@@ -40,21 +40,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cập nhật số lượng giỏ hàng (nếu có common.js)
     if (typeof updateCartCount === 'function') updateCartCount();
 
+// ---------------------------------------------------------
+    // 2. HÀM TẠO THẺ SÁCH (HTML) VÀ XỬ LÝ ẢNH
     // ---------------------------------------------------------
-    // 2. HÀM TẠO THẺ SÁCH (HTML)
-    // ---------------------------------------------------------
-    function createBookCard(book) {
-        // Tự động sửa đường dẫn ảnh nếu bị thừa chữ 'frontend/'
-        let imageUrl = book.image_url || 'https://placehold.co/300x450/e2e8f0/64748b?text=BookNè';
-        if (imageUrl.startsWith('frontend/')) {
-            imageUrl = imageUrl.replace('frontend/', ''); 
+    
+    // Hàm thông minh phân loại link ảnh (Giống hệt bên admin)
+    function getValidImageUrl(url) {
+        if (!url || url.trim() === '') return 'https://placehold.co/300x450/e2e8f0/64748b?text=BookNè';
+        
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
         }
+        
+        if (url.startsWith('/uploads/') || url.startsWith('uploads/')) {
+            const cleanPath = url.startsWith('/') ? url : `/${url}`;
+            return `http://127.0.0.1:3000${cleanPath}`;
+        }
+
+        // Vẫn giữ lại phần sửa lỗi 'frontend/' cũ của bạn cho an toàn
+        if (url.startsWith('frontend/')) {
+            return url.replace('frontend/', ''); 
+        }
+
+        return url;
+    }
+
+    function createBookCard(book) {
+        // Lấy link ảnh từ DB và đưa qua hàm xử lý thông minh
+        const dbImage = book.image_url || book.imageUrl;
+        const finalImgUrl = getValidImageUrl(dbImage);
 
         return `
             <div class="bg-white rounded-lg shadow-md overflow-hidden group transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 flex flex-col h-full">
                 <a href="detail.html?id=${book.id}" class="block h-72 w-full flex items-center justify-center p-4 overflow-hidden relative bg-white">
                     <img class="w-auto h-auto max-h-full max-w-full object-contain shadow-sm group-hover:scale-105 transition-transform duration-500" 
-                         src="${imageUrl}" 
+                         src="${finalImgUrl}" 
                          alt="Bìa sách ${book.title}">
                 </a>
                 <div class="px-4 pb-4 flex flex-col flex-grow">
@@ -69,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
-
     // ---------------------------------------------------------
     // 3. HÀM TẢI SÁCH TỪ SERVER
     // ---------------------------------------------------------

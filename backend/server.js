@@ -71,6 +71,8 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: false }
 }));
+// Cho phép Frontend truy cập vào thư mục uploads để lấy ảnh hiện lên web
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MIDDLEWARE BẢO MẬT ADMIN
 const checkAdmin = (req, res, next) => {
@@ -179,27 +181,59 @@ app.get('/books/:id', async (req, res) => {
 
 
 // ==========================================
-// ĐÃ FIX: API THÊM SÁCH CÓ UPLOAD ẢNH TỪ MÁY
+// API THÊM SÁCH: HỖ TRỢ CẢ 2 CÁCH (UPLOAD FILE TỪ MÁY VÀ DÁN LINK)
 // ==========================================
-// Thêm middleware upload.single('imageFile') để nó bắt file từ Frontend
-app.post('/books', upload.single('imageFile'), async (req, res) => {
-    // Vì dùng FormData nên dữ liệu sẽ nằm trong req.body, file nằm trong req.file
-    const { title, author, category, price, description, stock } = req.body;
+app.post('/books', upload.single('imageFile'), async (req, res) => { 
+    // 1. Nhận dữ liệu từ Frontend gửi lên (Tên biến phải khớp với formData trong file admin.js của bạn)
+    const { title, author, category, price, description, stock, imageUrl } = req.body;
     
-    // Nếu có file up lên thì dùng đường dẫn file, nếu không thì để trống hoặc dùng default
-    const finalImageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+    // 2. Xử lý đường dẫn ảnh 
+    let finalImageUrl = '';
+    if (req.file) { 
+        // Cách 1: Tải file từ máy tính
+        finalImageUrl = 'http://localhost:3000/uploads/' + req.file.filename;
+    } else if (imageUrl && imageUrl.trim() !== '') {
+        // Cách 2: Dán link mạng
+        finalImageUrl = imageUrl;
+    } else {
+        // Mặc định nếu không có ảnh
+        finalImageUrl = 'https://placehold.co/100x150?text=No+Image'; 
+    }
 
     try {
-        const [result] = await db.query(
-            `INSERT INTO books (title, author, category_id, price, description, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [title, author, category, price, description, finalImageUrl, stock ? parseInt(stock) : 1]
-        );
-        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId, imageUrl: finalImageUrl });
+        // 3. Ép kiểu dữ liệu (Đổi giá trị 'category' thành số nguyên để chuẩn bị nhét vào cột 'category_id')
+        const stockValue = stock ? parseInt(stock) : 1;
+        const priceValue = price ? parseFloat(price) : 0;
+        const categoryIdValue = parseInt(category); 
+
+        // Nếu file admin.html chưa sửa value thành số, chặn lại báo lỗi ngay để khỏi bị sập Database
+        if (isNaN(categoryIdValue)) {
+            return res.json({ 
+                success: false, 
+                message: "Lỗi: Danh mục (category) gửi lên không phải là số. Hãy sửa lại value='1', value='2'... trong thẻ <select> ở file admin.html!" 
+            });
+        }
+        
+        // 4. LƯU VÀO DATABASE (Đây là chỗ GỌI ĐÚNG TÊN CỘT TRONG BẢNG MYSQL CỦA BẠN: category_id, image_url)
+        const sqlQuery = `INSERT INTO books (title, author, category_id, price, description, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        
+        // Gắn các giá trị đã xử lý vào đúng vị trí dấu ?
+        const [result] = await db.query(sqlQuery, [
+            title, 
+            author, 
+            categoryIdValue, // Lưu vào cột category_id
+            priceValue, 
+            description, 
+            finalImageUrl,   // Lưu vào cột image_url
+            stockValue
+        ]);
+        
+        res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId });
     } catch (error) {
+        console.error("Lỗi khi thêm sách:", error);
         res.json({ success: false, message: error.message });
     }
 });
-
 
 app.put('/books/:id', async (req, res) => {
     const { title, author, category, price, description, imageUrl, stock } = req.body;
