@@ -76,27 +76,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabOrdersBtn) tabOrdersBtn.addEventListener('click', () => switchTab('orders'));
 
     // ============================================================
-    // 3. QUẢN LÝ SÁCH
+    // 3. QUẢN LÝ SÁCH (ĐÃ THÊM BIẾN LƯU BỘ NHỚ)
     // ============================================================
+    window.allBooksList = []; // Lưu tạm danh sách sách để dùng cho nút Sửa
+
     const bookListDiv = document.getElementById('book-list');
+
     async function loadBooks() {
         if (!bookListDiv) return;
         try {
             const response = await fetch('http://127.0.0.1:3000/books', { credentials: 'include' });
             const data = await response.json();
             if (data.success) {
+                
+                window.allBooksList = data.books; // Lưu dữ liệu vào biến
+
                 bookListDiv.innerHTML = '';
                 data.books.forEach(book => {
                     const item = document.createElement('div');
-                    item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm';
+                    item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm gap-4'; 
                     item.innerHTML = `
-                        <div>
-                            <h3 class="font-bold text-gray-800">${book.title}</h3>
-                            <p class="text-sm text-gray-600">${book.author} - Kho: <span class="font-bold">${book.stock || 0}</span></p>
+                        <div class="flex-1 min-w-0"> 
+                            <h3 class="font-bold text-gray-800 truncate" title="${book.title}">${book.title}</h3>
+                            <p class="text-sm text-gray-600 truncate" title="${book.author}">${book.author} - Kho: <span class="font-bold">${book.stock || 0}</span></p>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="font-bold text-emerald-600">${book.price.toLocaleString('vi-VN')}đ</span>
-                            <button onclick="deleteBook(${book.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-600 hover:text-white transition">Xóa</button>
+                        <div class="flex items-center gap-3 shrink-0"> 
+                            <span class="font-bold text-emerald-600 whitespace-nowrap">${Number(book.price).toLocaleString('vi-VN')}đ</span>
+                            <button onclick="editBook(${book.id})" class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-600 hover:text-white transition whitespace-nowrap">Sửa</button>
+                            <button onclick="updateStock(${book.id}, ${book.stock || 0})" class="bg-blue-100 text-blue-600 px-3 py-1 rounded hover:bg-blue-600 hover:text-white transition whitespace-nowrap">Nhập thêm</button>
+                            <button onclick="deleteBook(${book.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-600 hover:text-white transition whitespace-nowrap">Xóa</button>
                         </div>
                     `;
                     bookListDiv.appendChild(item);
@@ -143,19 +151,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================================
-    // 5. QUẢN LÝ ĐƠN HÀNG (ĐÃ FIX LỖI HIỂN THỊ TRẮNG MÀN HÌNH)
+    // 5. QUẢN LÝ ĐƠN HÀNG
     // ============================================================
     async function loadOrders() {
         const orderBody = document.getElementById('order-list-body');
         if (!orderBody) return;
 
-        // 1. Hiện dòng chữ Đang tải trước khi chờ Server
         orderBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500 font-medium">⏳ Đang tải dữ liệu đơn hàng...</td></tr>`;
 
         try {
-            // LƯU Ý: Đổi 3000 thành 8081 nếu server.js của bạn đang chạy port 8081
             const res = await fetch('http://127.0.0.1:3000/admin/orders', { credentials: 'include' });
-            
             if (!res.ok) throw new Error("Lỗi mạng hoặc sai đường dẫn API");
 
             const data = await res.json();
@@ -227,40 +232,138 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { 
             console.error("Lỗi Fetch:", e);
-            // 2. In thẳng lỗi ra UI nếu Server chưa bật hoặc sai cổng
             orderBody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-500 font-bold bg-red-50">❌ Lỗi kết nối Server! Vui lòng bật file server.js và kiểm tra đúng Port.</td></tr>`;
         }
     }
+
     // ============================================================
-    // 6. CÁC HÀM GLOBAL
+    // 6. CÁC HÀM GLOBAL (Dùng cho các nút bấm)
     // ============================================================
     window.updateOrderStatus = async (id, newStatus, currentStatus) => {
         if(!confirm(`Xác nhận đổi trạng thái đơn #${id} thành "${newStatus}"?`)) { 
             loadOrders(); 
             return; 
         }
-
         try {
             const res = await fetch(`http://127.0.0.1:3000/admin/orders/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }), // Gửi status mới lên server
+                body: JSON.stringify({ status: newStatus }),
                 credentials: 'include'
             });
-            
             const data = await res.json();
             if (data.success) {
                 alert("Đã cập nhật trạng thái thành công!");
-                loadOrders(); // Gọi lại hàm để cập nhật giao diện mà không cần F5
-            } else {
-                alert("Lỗi từ server: " + data.message);
-            }
-        } catch (e) {
-            alert("Không thể kết nối đến Server!");
-        }
+                loadOrders(); 
+            } else { alert("Lỗi từ server: " + data.message); }
+        } catch (e) { alert("Không thể kết nối đến Server!"); }
     };
 
-    window.deleteBook = async (id) => { if(confirm("Xóa sách?")) { await fetch(`http://127.0.0.1:3000/admin/delete-book/${id}`, { method: 'DELETE', credentials: 'include' }); loadBooks(); } };
+    window.deleteBook = async (id) => { 
+        if(confirm("Xóa sách này?")) { 
+            await fetch(`http://127.0.0.1:3000/admin/delete-book/${id}`, { method: 'DELETE', credentials: 'include' }); 
+            loadBooks(); 
+        } 
+    };
+
+    window.updateStock = async (id, currentStock) => {
+        const addAmountStr = prompt(`Sách này đang có ${currentStock} cuốn.\nBạn muốn nhập thêm bao nhiêu cuốn về kho?`, "10");
+        if (addAmountStr === null || addAmountStr.trim() === "") return; 
+
+        const addAmount = parseInt(addAmountStr);
+        if (isNaN(addAmount) || addAmount <= 0) {
+            return alert("Số lượng nhập vào không hợp lệ! Phải là số lớn hơn 0.");
+        }
+
+        const newTotalStock = currentStock + addAmount;
+        try {
+            const res = await fetch(`http://127.0.0.1:3000/admin/update-book/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stock: newTotalStock }),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Đã nhập thêm ${addAmount} cuốn.\nTổng tồn kho mới là: ${newTotalStock}`);
+                loadBooks();
+            } else { alert("❌ Lỗi: " + data.message); }
+        } catch (err) { alert("Lỗi kết nối server."); }
+    };
+
+    // ============================================================
+    // 7. HÀM SỬA THÔNG TIN SÁCH (ĐÃ SỬA LỖI 404)
+    // ============================================================
+    window.editBook = (id) => {
+        // Tìm sách ngay trong danh sách đã lưu ở trên, siêu nhanh!
+        const book = window.allBooksList.find(b => b.id === id);
+        
+        if (!book) return alert("Không tìm thấy sách. Vui lòng tải lại trang!");
+
+        // Tạo Popup đè lên màn hình
+        const modalHtml = `
+            <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                    <h2 class="text-xl font-bold mb-4 text-emerald-600">Sửa Thông Tin Sách</h2>
+                    <form id="form-edit-book">
+                        <div class="mb-3">
+                            <label class="block font-semibold mb-1">Tên sách</label>
+                            <input type="text" id="edit-title" class="w-full border p-2 rounded focus:border-emerald-500 outline-none" value="${book.title}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block font-semibold mb-1">Tác giả</label>
+                            <input type="text" id="edit-author" class="w-full border p-2 rounded focus:border-emerald-500 outline-none" value="${book.author}" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block font-semibold mb-1">Giá (VNĐ)</label>
+                            <input type="number" id="edit-price" class="w-full border p-2 rounded focus:border-emerald-500 outline-none" value="${Number(book.price).toLocaleString('vi-VN')}" required>
+                        </div>
+                        <div class="flex justify-end gap-3">
+                            <button type="button" onclick="document.getElementById('edit-modal').remove()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Hủy</button>
+                            <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const oldModal = document.getElementById('edit-modal');
+        if (oldModal) oldModal.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Lắng nghe sự kiện khi Admin bấm nút "Lưu thay đổi"
+        document.getElementById('form-edit-book').addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const updatedData = {
+                title: document.getElementById('edit-title').value,
+                author: document.getElementById('edit-author').value,
+                price: document.getElementById('edit-price').value
+            };
+
+            // Gọi API Update lên Server
+            try {
+                const updateRes = await fetch(`http://127.0.0.1:3000/admin/edit-book/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedData),
+                    credentials: 'include'
+                });
+
+                const result = await updateRes.json();
+                if (result.success) {
+                    alert("✅ Sửa thông tin thành công!");
+                    document.getElementById('edit-modal').remove(); 
+                    loadBooks(); // F5 lại danh sách
+                } else {
+                    alert("❌ Lỗi: " + result.message);
+                }
+            } catch(err) {
+                alert("Lỗi kết nối khi lưu!");
+            }
+        });
+    };
+
     window.deleteUser = async (id, name) => { if(confirm(`Xóa ${name}?`)) { const res = await fetch(`http://127.0.0.1:3000/users/${id}`, { method: 'DELETE', credentials: 'include' }); loadUsers(); } };
     window.toggleRole = async (id, name, role) => { if(confirm("Đổi quyền?")) { await fetch(`http://127.0.0.1:3000/users/role/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ isAdmin: role }), credentials: 'include' }); loadUsers(); } };
 
