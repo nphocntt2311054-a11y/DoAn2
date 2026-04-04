@@ -76,9 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabOrdersBtn) tabOrdersBtn.addEventListener('click', () => switchTab('orders'));
 
     // ============================================================
-    // 3. QUẢN LÝ SÁCH (ĐÃ THÊM BIẾN LƯU BỘ NHỚ)
+    // 3. QUẢN LÝ SÁCH 
     // ============================================================
-    window.allBooksList = []; // Lưu tạm danh sách sách để dùng cho nút Sửa
+    window.allBooksList = []; 
 
     const bookListDiv = document.getElementById('book-list');
 
@@ -89,13 +89,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.success) {
                 
-                window.allBooksList = data.books; // Lưu dữ liệu vào biến
+                window.allBooksList = data.books; 
 
                 bookListDiv.innerHTML = '';
                 data.books.forEach(book => {
+                    // Cấp phát link ảnh (ĐÃ SỬA CHỖ NÀY ĐỂ NHẬN DIỆN ĐÚNG LINK VÀ CHỐNG LỖI)
+                    let imgUrl = 'https://placehold.co/100x150?text=No+Image';
+                    if (book.image_url && book.image_url.trim() !== '') {
+                        if (book.image_url.startsWith('http://') || book.image_url.startsWith('https://')) {
+                            imgUrl = book.image_url; // Link từ mạng thì giữ nguyên
+                        } else {
+                            // Link up từ máy thì ghép với server (chống dư dấu /)
+                            const cleanPath = book.image_url.startsWith('/') ? book.image_url : `/${book.image_url}`;
+                            imgUrl = `http://127.0.0.1:3000${cleanPath}`;
+                        }
+                    }
+
                     const item = document.createElement('div');
                     item.className = 'p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm gap-4'; 
                     item.innerHTML = `
+                        <div class="w-12 h-16 shrink-0 bg-gray-100 rounded overflow-hidden border">
+                            <img src="${imgUrl}" class="w-full h-full object-cover" alt="Ảnh sách" onerror="this.src='https://placehold.co/100x150?text=Lỗi+Ảnh'">
+                        </div>
                         <div class="flex-1 min-w-0"> 
                             <h3 class="font-bold text-gray-800 truncate" title="${book.title}">${book.title}</h3>
                             <p class="text-sm text-gray-600 truncate" title="${book.author}">${book.author} - Kho: <span class="font-bold">${book.stock || 0}</span></p>
@@ -111,6 +126,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         } catch (error) { console.error(error); }
+    }
+
+    // ============================================================
+    // 3.5. XỬ LÝ FORM THÊM SÁCH (ĐÃ MAP CHUẨN ID HTML CỦA BẠN)
+    // ============================================================
+    const formAddBook = document.getElementById('add-book-form'); // Trùng khớp hoàn toàn với HTML
+    if (formAddBook) {
+        formAddBook.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData();
+            
+            // Map chính xác từng trường ID theo đúng HTML bạn gửi
+            formData.append('title', document.getElementById('title').value);
+            formData.append('author', document.getElementById('author').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('position', document.getElementById('book-position').value);
+            formData.append('price', document.getElementById('price').value);
+            formData.append('stock', document.getElementById('stock').value);
+            formData.append('description', document.getElementById('description').value);
+
+            // Bắt ID file ảnh chuẩn xác
+            const imageInput = document.getElementById('add-image_file'); 
+            if (imageInput && imageInput.files.length > 0) {
+                formData.append('imageFile', imageInput.files[0]); // Đảm bảo server.js của bạn nhận 'imageFile'
+            }
+
+            try {
+                const res = await fetch('http://127.0.0.1:3000/books', {
+                    method: 'POST',
+                    body: formData, 
+                    credentials: 'include'
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert('✅ Thêm sách và upload ảnh thành công!');
+                    formAddBook.reset(); 
+                    loadBooks(); 
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                }
+            } catch (err) {
+                console.error("Lỗi thêm sách:", err);
+                alert("Lỗi kết nối Server khi thêm sách!");
+            }
+        });
     }
 
     // ============================================================
@@ -292,15 +354,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ============================================================
-    // 7. HÀM SỬA THÔNG TIN SÁCH (ĐÃ SỬA LỖI 404)
+    // 7. HÀM SỬA THÔNG TIN SÁCH 
     // ============================================================
     window.editBook = (id) => {
-        // Tìm sách ngay trong danh sách đã lưu ở trên, siêu nhanh!
         const book = window.allBooksList.find(b => b.id === id);
         
         if (!book) return alert("Không tìm thấy sách. Vui lòng tải lại trang!");
 
-        // Tạo Popup đè lên màn hình
         const modalHtml = `
             <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
                 <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
@@ -316,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="mb-4">
                             <label class="block font-semibold mb-1">Giá (VNĐ)</label>
-                            <input type="number" id="edit-price" class="w-full border p-2 rounded focus:border-emerald-500 outline-none" value="${Number(book.price).toLocaleString('vi-VN')}" required>
+                            <input type="number" id="edit-price" class="w-full border p-2 rounded focus:border-emerald-500 outline-none" value="${book.price}" required>
                         </div>
                         <div class="flex justify-end gap-3">
                             <button type="button" onclick="document.getElementById('edit-modal').remove()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">Hủy</button>
@@ -331,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (oldModal) oldModal.remove();
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-        // Lắng nghe sự kiện khi Admin bấm nút "Lưu thay đổi"
         document.getElementById('form-edit-book').addEventListener('submit', async (e) => {
             e.preventDefault(); 
             
@@ -341,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 price: document.getElementById('edit-price').value
             };
 
-            // Gọi API Update lên Server
             try {
                 const updateRes = await fetch(`http://127.0.0.1:3000/admin/edit-book/${id}`, {
                     method: 'PUT',
@@ -354,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.success) {
                     alert("✅ Sửa thông tin thành công!");
                     document.getElementById('edit-modal').remove(); 
-                    loadBooks(); // F5 lại danh sách
+                    loadBooks(); 
                 } else {
                     alert("❌ Lỗi: " + result.message);
                 }

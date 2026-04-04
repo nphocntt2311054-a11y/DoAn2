@@ -1,4 +1,4 @@
-// frontend/cart.js - PHIÊN BẢN CHỌN SẢN PHẨM ĐỂ MUA
+// frontend/cart.js - PHIÊN BẢN CHỌN SẢN PHẨM ĐỂ MUA (ĐÃ CHẶN MUA LỐ TỒN KHO)
 
 document.addEventListener('DOMContentLoaded', () => {
     const cartContainer = document.getElementById('cart-items-container');
@@ -147,11 +147,11 @@ function updateTotalDisplay(amount) {
     if(cartTotalEl) cartTotalEl.textContent = formatted;
 }
 
-// --- CÁC HÀM TĂNG/GIẢM/XÓA (Giữ nguyên logic) ---
+// --- CÁC HÀM TĂNG/GIẢM/XÓA ---
 function decreaseItem(index) {
     let cart = JSON.parse(localStorage.getItem('shopping-cart')) || [];
     if (cart[index].quantity <= 1) {
-        if(confirm('Xóa sản phẩm này?')) cart.splice(index, 1);
+        if(confirm('Xóa sản phẩm này khỏi giỏ hàng?')) cart.splice(index, 1);
     } else {
         cart[index].quantity -= 1;
     }
@@ -159,15 +159,44 @@ function decreaseItem(index) {
     location.reload();
 }
 
-function increaseItem(index) {
+// ==============================================================
+// ĐÃ FIX: HÀM TĂNG SỐ LƯỢNG (KIỂM TRA TỒN KHO THỰC TẾ TỪ SERVER)
+// ==============================================================
+window.increaseItem = async function(index) {
     let cart = JSON.parse(localStorage.getItem('shopping-cart')) || [];
+    let item = cart[index];
+
+    try {
+        // Gọi API lên Server để hỏi xem sách này hiện tại còn bao nhiêu cuốn
+        const res = await fetch(`http://127.0.0.1:3000/books/${item.id}`);
+        const data = await res.json();
+
+        if (data.success) {
+            const realStock = data.book.stock || 0; // Số tồn kho trên Database
+
+            // Nếu số lượng trong giỏ hàng sắp lớn hơn tồn kho thực tế -> Chặn lại
+            if (item.quantity >= realStock) {
+                alert(`❌ Sách "${item.title}" trong kho chỉ còn đúng ${realStock} quyển!\nBạn không thể mua vượt quá số lượng này.`);
+                return; // Dừng hàm lại, không cho cộng thêm
+            }
+        } else {
+            alert("Lỗi: Không thể kiểm tra tồn kho. Vui lòng thử lại sau.");
+            return;
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Lỗi kết nối máy chủ. Không thể kiểm tra tồn kho!");
+        return;
+    }
+
+    // Nếu vượt qua được bài kiểm tra trên (Kho vẫn đủ) -> Cho phép cộng
     cart[index].quantity += 1;
     localStorage.setItem('shopping-cart', JSON.stringify(cart));
     location.reload();
 }
 
 function removeItem(index) {
-    if(confirm('Xóa sản phẩm này?')) {
+    if(confirm('Xóa sản phẩm này khỏi giỏ hàng?')) {
         let cart = JSON.parse(localStorage.getItem('shopping-cart')) || [];
         cart.splice(index, 1);
         localStorage.setItem('shopping-cart', JSON.stringify(cart));
