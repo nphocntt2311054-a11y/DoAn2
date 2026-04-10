@@ -1,318 +1,239 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Chủ</title>
+    <title>Trang Chủ - BookNè</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script>
-          tailwind.config = {
+        tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
                         'sans': ['Inter', 'sans-serif'],
                     },
                     colors: {
-                   
-                        'light-green': '#e5f9edff', 
+                        'light-green': '#e5f9edff',
                         'primary': '#32795aff',
                         'primary-dark': '#13d2a2ff',
-                    },  
+                    },
                 }
             }
         }
     </script>
     <link rel="stylesheet" href="trangchu.css">
 </head>
-<body class="bg-gray-50 font-sans">
-    <!-- ==== HEADER ==== -->
+
+<body class="bg-gray-50 font-sans text-gray-800">
+
     <header class="bg-white border-b border-gray-200 sticky top-0 z-[999]">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-1 flex flex-col md:flex-row justify-between items-center gap-4">
-            <!-- Logo -->
-             <a href="trangchu.html"><img src="image/logo.png" alt="Logo BookNè" width="120" height="auto">
-            </a> 
-            <!-- Tìm kiếm -->
+        <div
+            class="container mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="trangchu.html" class="flex-shrink-0">
+                <img src="image/logo.png" alt="Logo BookNè" width="120" height="auto">
+            </a>
+
             <div class="relative w-full md:w-1/2 lg:w-1/3">
-                <input id="search-input" type="search" class="w-full py-2.5 px-4 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Tìm kiếm sách, tác giả...">
-    
-                <div id="search-btn" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none cursor-pointer">
-                    <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                <input id="search-input" type="search"
+                    class="w-full py-2.5 px-4 pl-10 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Tìm kiếm sách, tác giả...">
+                <div id="search-btn"
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none cursor-pointer">
+                    <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                 </div>
             </div>
-            <!-- Tài khoản  -->
-        <div class="flex items-center gap-3">
-            <div id="account-area">
-                <a href="login.html" class="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
-                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+
+            <div class="flex items-center gap-5">
+                <div id="account-area">
+                    <a href="login.html"
+                        class="flex items-center gap-2 text-gray-700 hover:text-primary transition-colors">
+                        <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        </svg>
+                        <span class="hidden md:inline font-medium">Đăng nhập</span>
+                    </a>
+                </div>
+
+                <a href="cart.html" class="relative p-2 text-gray-700 hover:text-primary transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    <span class="hidden md:inline">Đăng nhập</span>
+                    <span id="cart-count"
+                        class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                 </a>
             </div>
-
-        <!-- Giỏ hàng --> 
-            <a href="cart.html" class="relative p-2 text-gray-600 hover:text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span id="cart-count"
-                    class="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
-            </a>
-        
-        </div>
-
         </div>
     </header>
 
-    <!-- ==== NAVIGATION ==== -->
     <nav class="bg-emerald-50 shadow-sm relative z-50">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <ul class="flex justify-center items-center h-14 space-x-6 sm:space-x-10">
-                <li><a href="trangchu.html" class="font-semibold text-gray-800 hover:text-primary transition-colors">Trang chủ</a></li>
+                <li><a href="trangchu.html"
+                        class="font-semibold text-primary hover:text-primary-dark transition-colors">Trang chủ</a></li>
                 <li class="relative group">
-                    <a href="#" class="font-semibold text-gray-800 hover:text-emerald-600 transition-colors flex items-center">Danh mục sản phẩm
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <a href="#"
+                        class="font-semibold text-gray-800 hover:text-primary transition-colors flex items-center py-4">Danh
+                        mục sản phẩm
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
                     </a>
-                        <ul class="absolute left-0 mt-2 w-56 bg-white shadow-lg rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                            <li><a href="VanHoc.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700 rounded-t-lg">Văn học</a></li>
-                            <li><a href="KinhTe.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700">Kinh tế</a></li>
-                            <li><a href="SachTamLy.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700">Tâm lý - Kỹ năng sống</a></li>
-                            <li><a href="SachKhoaHoc.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700">Sách khoa học</a></li>
-                            <li><a href="SachAV.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700">Sách học ngoại ngữ</a></li>
-                            <li><a href="SachThieuNhi.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700">Sách thiếu nhi</a></li>
-                            <li><a href="SachDayCon.html" class="block px-4 py-2 text-gray-700 hover:bg-emerald-100 hover:text-emerald-700 rounded-b-lg">Sách dạy con</a></li>
-                        </ul>
+                    <ul
+                        class="absolute left-0 top-full w-56 bg-white shadow-lg rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 border border-gray-100">
+                        <li><a href="VanHoc.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary rounded-t-lg transition-colors">Văn
+                                học</a></li>
+                        <li><a href="KinhTe.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary transition-colors">Kinh
+                                tế</a></li>
+                        <li><a href="SachTamLy.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary transition-colors">Tâm
+                                lý - Kỹ năng sống</a></li>
+                        <li><a href="SachKhoaHoc.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary transition-colors">Sách
+                                khoa học</a></li>
+                        <li><a href="SachAV.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary transition-colors">Sách
+                                học ngoại ngữ</a></li>
+                        <li><a href="SachThieuNhi.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary transition-colors">Sách
+                                thiếu nhi</a></li>
+                        <li><a href="SachDayCon.html"
+                                class="block px-4 py-3 text-gray-700 hover:bg-emerald-50 hover:text-primary rounded-b-lg transition-colors">Sách
+                                dạy con</a></li>
+                    </ul>
                 </li>
-                <li><a href="GioiThieu.html" class="font-semibold text-gray-800 hover:text-primary transition-colors">Giới thiệu</a></li>
-                <li><a href="LienHe.html" class="font-semibold text-gray-800 hover:text-primary transition-colors">Liên hệ</a></li>
+                <li><a href="GioiThieu.html"
+                        class="font-semibold text-gray-800 hover:text-primary transition-colors">Giới thiệu</a></li>
+                <li><a href="LienHe.html" class="font-semibold text-gray-800 hover:text-primary transition-colors">Liên
+                        hệ</a></li>
             </ul>
         </div>
     </nav>
-  <!-- ==== BANNER ==== -->
-      <section class="w-full max-w-6xl mx-auto mt-6 px-4 md:px-0 relative group">
-    
-    <div class="w-full overflow-hidden rounded-xl shadow-lg">
-        
-        <div id="banner-slider" class="flex transition-transform duration-700 ease-in-out">
-            
-            <div class="w-full flex-shrink-0">
-                <a href="#">
-                    <img src="image/banner (2).png" alt="Banner Giáng Sinh" class="w-full h-auto block">
-                </a>
-            </div>
-            
-            <!-- <div class="w-full flex-shrink-0">
-                <a href="SachAV.html">
-                    <img src="image/banner1.png" alt="Banner 2" class="w-full h-auto block">
-                </a>
-            </div> -->
 
-        </div>
-    </div>
+    <main class="pb-12 space-y-6 pt-6">
 
-<!-- <button id="prevBtn" class="absolute top-1/2 left-6 -translate-y-1/2 bg-gray-800/30 hover:bg-gray-800/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-    </button>
-
-    <button id="nextBtn" class="absolute top-1/2 right-6 -translate-y-1/2 bg-gray-800/30 hover:bg-gray-800/70 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-        </svg>
-    </button> -->
-
-</section>
-    
-        <!-- ==== KHU VỰC MỚI: DANH MỤC ==== -->
-        <section class="py-16">
-            <div class="max-w-6xl mx-auto px-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">Khám Phá Danh Mục</h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <!-- Danh mục 1 -->
-                    <a href="VanHoc.html" class="block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2 group">
-                        <img src="image/Vanhoc.jpg" alt="Văn học" class="h-20 w-20 mx-auto mb-4 rounded-full group-hover:animate-pulse">
-                        <h3 class="text-xl font-semibold text-center text-gray-800 group-hover:text-primary">Văn Học</h3>
-                    </a>
-                    <!-- Danh mục 2 -->
-                    <a href="KinhTe.html" class="block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2 group">
-                        <img src="image/KinhTe.jpg" alt="Kinh tế" class="h-20 w-20 mx-auto mb-4 rounded-full group-hover:animate-pulse">
-                        <h3 class="text-xl font-semibold text-center text-gray-800 group-hover:text-primary">Kinh Tế</h3>
-                    </a>
-                    <!-- Danh mục 3 -->
-                    <a href="SachTamLy.html" class="block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2 group">
-                        <img src="image/TamLy.jpg" alt="Kỹ năng sống" class="h-20 w-20 mx-auto mb-4 rounded-full group-hover:animate-pulse">
-                        <h3 class="text-xl font-semibold text-center text-gray-800 group-hover:text-primary">Tâm Lý</h3>
-                    </a>
-                    <!-- Danh mục 4 -->
-                    <a href="SachThieuNhi.html" class="block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2 group">
-                        <img src="image/ThieuNhi.jpg" alt="Thiếu nhi" class="h-20 w-20 mx-auto mb-4 rounded-full group-hover:animate-pulse">
-                        <h3 class="text-xl font-semibold text-center text-gray-800 group-hover:text-primary">Thiếu Nhi</h3>
-                    </a>
+        <section class="w-full max-w-6xl mx-auto px-4 md:px-0 relative group">
+            <div class="w-full overflow-hidden rounded-xl shadow-sm bg-white">
+                <div id="banner-slider" class="flex transition-transform duration-700 ease-in-out">
+                    <div class="w-full flex-shrink-0">
+                        <a href="#">
+                            <img src="image/banner (2).png" alt="Banner" class="w-full h-auto block rounded-xl">
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>
 
-
-        <!-- ==== SẢN PHẨM NỔI BẬT (Grid 4) ==== -->
-        <section class="py-16">
-            <div class="max-w-6xl mx-auto px-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">Sản Phẩm Nổi Bật</h2>
-                <!-- Giữ grid-4 của bạn, thêm responsive -->
-                <div id="featured-book-list" class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
-                    <!-- Product Card Mẫu -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="image/imgtrangchu/noibac1.webp" alt="ảnh bìa nổi bật 1">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Tên Sách Nổi Bật 1</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả A</p>
-                            <p class="text-lg font-bold text-primargit y">120.000đ</p>
-                        </div>
-                    </div>
-                    <!-- Các card khác -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+2" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Tên Sách Nổi Bật 2</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả B</p>
-                            <p class="text-lg font-bold text-primary">99.000đ</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+3" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Tên Sách Nổi Bật 3</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả C</p>
-                            <p class="text-lg font-bold text-primary">150.000đ</p>
-                        </div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+4" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Tên Sách Nổi Bật 4</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả D</p>
-                            <p class="text-lg font-bold text-primary">179.000đ</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- ==== SẢN PHẨM MỚI  ==== -->
-        <section class="py-16 bg-gray-100">
-            <div class="max-w-6xl mx-auto px-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10">Sản Phẩm Mới</h2>
-                <!-- Giữ grid-4 của bạn, thêm responsive -->
-                <div id="new-book-list" class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
-                    <!-- Product Card -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+Mới+1" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Sách Mới 1</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả E</p>
-                            <p class="text-lg font-bold text-primary">199.000đ</p>
-                        </div>
-                    </div>
-                    <!-- Product Card -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+Mới+2" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Sách Mới 2</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả F</p>
-                            <p class="text-lg font-bold text-primary">250.000đ</p>
-                        </div>
-                    </div>
-                    <!-- Product Card -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+Mới+3" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Sách Mới 3</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả G</p>
-                            <p class="text-lg font-bold text-primary">180.000đ</p>
-                        </div>
-                    </div>
-                    <!-- Product Card -->
-                    <div class="bg-white rounded-xl shadow-lg overflow-hidden group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
-                        <a href="#" class="block aspect-[2/3] overflow-hidden">
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://placehold.co/300x450/e2e8f0/64748b?text=Sách+Mới+4" alt="Bìa sách">
-                        </a>
-                        <div class="p-4">
-                            <h3 class="text-md font-semibold text-gray-800 mb-1 truncate group-hover:text-primary">
-                                <a href="#">Sách Mới 4</a>
-                            </h3>
-                            <p class="text-sm text-gray-500 mb-3">Tác giả H</p>
-                            <p class="text-lg font-bold text-primary">320.000đ</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    
-        <!-- ==== SẢN PHẨM GỢI Ý  ==== -->
-        <section class="py-16 bg-white">
-            <div class="max-w-7xl mx-auto px-4">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-10 flex items-center justify-center gap-3">
-                    <span class="bg-yellow-400 h-1 w-10 rounded-full"></span>
-                    Gợi Ý Dành Cho Bạn
-                    <span class="bg-yellow-400 h-1 w-10 rounded-full"></span>
+        <section class="px-4 md:px-0">
+            <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <span class="bg-primary h-6 w-1.5 rounded-full"></span> Khám Phá Danh Mục
                 </h2>
-
-                <div id="suggested-book-list" class="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-6">
-                    <p class="text-center col-span-full text-gray-500">Đang tải sách gợi ý...</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <a href="VanHoc.html"
+                        class="block bg-gray-50 p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all transform hover:-translate-y-1 group">
+                        <img src="image/Vanhoc.jpg" alt="Văn học"
+                            class="h-20 w-20 mx-auto mb-4 rounded-full shadow-sm group-hover:scale-105 transition-transform">
+                        <h3 class="text-lg font-semibold text-center text-gray-800 group-hover:text-primary">Văn Học
+                        </h3>
+                    </a>
+                    <a href="KinhTe.html"
+                        class="block bg-gray-50 p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all transform hover:-translate-y-1 group">
+                        <img src="image/KinhTe.jpg" alt="Kinh tế"
+                            class="h-20 w-20 mx-auto mb-4 rounded-full shadow-sm group-hover:scale-105 transition-transform">
+                        <h3 class="text-lg font-semibold text-center text-gray-800 group-hover:text-primary">Kinh Tế
+                        </h3>
+                    </a>
+                    <a href="SachTamLy.html"
+                        class="block bg-gray-50 p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all transform hover:-translate-y-1 group">
+                        <img src="image/TamLy.jpg" alt="Kỹ năng sống"
+                            class="h-20 w-20 mx-auto mb-4 rounded-full shadow-sm group-hover:scale-105 transition-transform">
+                        <h3 class="text-lg font-semibold text-center text-gray-800 group-hover:text-primary">Tâm Lý</h3>
+                    </a>
+                    <a href="SachThieuNhi.html"
+                        class="block bg-gray-50 p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all transform hover:-translate-y-1 group">
+                        <img src="image/ThieuNhi.jpg" alt="Thiếu nhi"
+                            class="h-20 w-20 mx-auto mb-4 rounded-full shadow-sm group-hover:scale-105 transition-transform">
+                        <h3 class="text-lg font-semibold text-center text-gray-800 group-hover:text-primary">Thiếu Nhi
+                        </h3>
+                    </a>
                 </div>
             </div>
         </section>
+
+        <section class="px-4 md:px-0">
+            <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-red-500 h-6 w-1.5 rounded-full"></span> Sản Phẩm Nổi Bật
+                    </h2>
+                    <!-- <a href="#" class="text-primary hover:text-primary-dark font-medium text-sm">Xem tất cả ❯</a> -->
+                </div>
+
+                <div id="featured-book-list" class="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+                    <p class="text-center col-span-full text-gray-500 py-8">Đang tải sách nổi bật...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="px-4 md:px-0">
+            <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-blue-500 h-6 w-1.5 rounded-full"></span> Sách Mới Nhất
+                    </h2>
+                    <!-- <a href="#" class="text-primary hover:text-primary-dark font-medium text-sm">Xem tất cả ❯</a> -->
+                </div>
+
+                <div id="new-book-list" class="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+                    <p class="text-center col-span-full text-gray-500 py-8">Đang tải sách mới...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="px-4 md:px-0">
+            <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                <div class="mb-8 border-b border-gray-100 pb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="bg-yellow-400 h-6 w-1.5 rounded-full"></span> Gợi Ý Dành Cho Bạn
+                    </h2>
+                </div>
+
+                <div id="suggested-book-list" class="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-5">
+                    <p class="text-center col-span-full text-gray-500 py-8">Đang tải sách gợi ý...</p>
+                </div>
+            </div>
+        </section>
+
     </main>
- <!-- FOOTER -->
- <footer class="bg-gray-900 text-gray-300">
+
+<!-- FOOTER -->
+<footer class="bg-gray-900 text-gray-300">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 justify-items-center">
-            
+
             <div class="w-full max-w-xs text-left">
                 <h4 class="text-lg font-semibold text-white mb-4">Tin Tức</h4>
                 <ul class="space-y-3">
                     <li>
                         <a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">
-                            "Bước vào không gian tri thức vô tận, nơi mỗi cuốn sách là một cánh cửa mở ra những cuộc phiêu lưu mới mẻ và kiến thức sâu rộng; chúng tôi cam kết mang đến trải nghiệm mua sắm..."
+                            "Bước vào không gian tri thức vô tận, nơi mỗi cuốn sách là một cánh cửa mở ra những cuộc
+                            phiêu lưu mới mẻ và kiến thức sâu rộng; chúng tôi cam kết mang đến trải nghiệm mua sắm..."
                         </a>
                     </li>
                 </ul>
@@ -321,23 +242,33 @@
             <div class="w-full max-w-xs text-left">
                 <h4 class="text-lg font-semibold text-white mb-4">Hỗ trợ khách hàng</h4>
                 <ul class="space-y-3">
-                    <li><a href="tel:19001909" class="text-sm text-gray-400 hover:text-white transition-colors">HotLine: 19001909</a></li>
-                    <li><a href="https://www.facebook.com/" class="text-sm text-gray-400 hover:text-white transition-colors">Facebook: https://www.facebook.com/</a></li>
-                    <li><a href="https://www.tiktok.com/" class="text-sm text-gray-400 hover:text-white transition-colors">TikTok: https://www.TikTok.com/</a></li>
-                    <li><a href="mailto:support@bookworld.vn" class="text-sm text-gray-400 hover:text-white transition-colors">Gmail: support@bookworld.vn</a></li>
+                    <li><a href="tel:19001909" class="text-sm text-gray-400 hover:text-white transition-colors">HotLine:
+                            19001909</a></li>
+                    <li><a href="https://www.facebook.com/"
+                            class="text-sm text-gray-400 hover:text-white transition-colors">Facebook:
+                            https://www.facebook.com/</a></li>
+                    <li><a href="https://www.tiktok.com/"
+                            class="text-sm text-gray-400 hover:text-white transition-colors">TikTok:
+                            https://www.TikTok.com/</a></li>
+                    <li><a href="mailto:support@bookworld.vn"
+                            class="text-sm text-gray-400 hover:text-white transition-colors">Gmail:
+                            support@bookworld.vn</a></li>
                 </ul>
             </div>
 
             <div class="w-full max-w-xs text-left">
                 <h4 class="text-lg font-semibold text-white mb-4">Tài khoản của tôi</h4>
                 <ul class="space-y-3">
-                    <li><a href="register.html" class="text-sm text-gray-400 hover:text-white transition-colors">Đăng ký</a></li>
-                    <li><a href="login.html" class="text-sm text-gray-400 hover:text-white transition-colors">Đăng nhập</a></li>
-                    <li><a href="history.html" class="text-sm text-gray-400 hover:text-white transition-colors">Lịch sử mua hàng</a></li>
+                    <li><a href="register.html" class="text-sm text-gray-400 hover:text-white transition-colors">Đăng
+                            ký</a></li>
+                    <li><a href="login.html" class="text-sm text-gray-400 hover:text-white transition-colors">Đăng
+                            nhập</a></li>
+                    <li><a href="history.html" class="text-sm text-gray-400 hover:text-white transition-colors">Lịch sử
+                            mua hàng</a></li>
                 </ul>
             </div>
         </div>
-        
+
         <div class="mt-12 pt-8 border-t border-gray-800 text-center">
             <p class="text-sm text-gray-500">
                 &copy; 2025 BookWorld.
@@ -346,15 +277,19 @@
     </div>
 </footer>
 
-    <!-- ==== NÚT LIÊN HỆ ZALO ==== -->
-    <a href="https://zalo.me/0358689685" target="_blank" rel="noopener noreferrer" 
-       class="fixed bottom-6 right-6 z-30 bg-blue-600 text-white p-3 rounded-full shadow-lg transform transition-all duration-300 hover:bg-blue-700 hover:scale-110"
-       title="Liên hệ qua Zalo">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+
+    <a href="https://zalo.me/0358689685" target="_blank" rel="noopener noreferrer"
+        class="fixed bottom-6 right-6 z-30 bg-blue-600 text-white p-3 rounded-full shadow-lg transform transition-all duration-300 hover:bg-blue-700 hover:scale-110"
+        title="Liên hệ qua Zalo">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
     </a>
+
     <script src="trangchu.js"></script>
     <script src="common.js"></script>
 </body>
+
 </html>

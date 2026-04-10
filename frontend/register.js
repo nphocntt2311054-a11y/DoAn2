@@ -4,14 +4,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageEl = document.getElementById('message');
 
     registerForm.addEventListener('submit', async (e) => {
-        // Ngăn form tự động gửi đi
+        // Ngăn form tự động gửi đi để xử lý bằng JS
         e.preventDefault(); 
 
-        // 1. Lấy dữ liệu từ các ô input
+        // 1. Chỉ lấy đúng 3 dữ liệu từ các ô input hiện có
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
-        const securityQuestion = document.getElementById('securityQuestion').value;
-        const securityAnswer = document.getElementById('securityAnswer').value;
+        const email = document.getElementById('email').value;
 
         // 2. Gửi dữ liệu đến Backend
         try {
@@ -20,29 +19,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                // Chuyển dữ liệu thành chuỗi JSON
+                // Đóng gói 3 biến này thành JSON gửi đi
                 body: JSON.stringify({ 
                     username, 
                     password, 
-                    securityQuestion, 
-                    securityAnswer 
+                    email 
                 }),
                 credentials: 'include'
             });
 
-            const result = await response.json(); // Đọc kết quả backend trả về
+            const result = await response.json(); 
 
             if (result.success) {
-                // Nếu thành công
+                // Nếu backend báo thành công
                 messageEl.textContent = 'Đăng ký thành công! Đang chuyển đến trang đăng nhập...';
                 messageEl.style.color = 'green';
-                // Chờ 2 giây rồi chuyển sang trang login
+                // Chờ 2 giây rồi chuyển sang login
                 setTimeout(() => {
                     window.location.href = 'login.html';
                 }, 2000);
             } else {
-                // Nếu thất bại
-                messageEl.textContent = result.message; // Hiển thị lỗi (VD: Tên đăng nhập đã tồn tại)
+                // Nếu thất bại (vd: trùng tên)
+                messageEl.textContent = result.message; 
                 messageEl.style.color = 'red';
             }
 

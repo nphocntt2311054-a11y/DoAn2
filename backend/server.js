@@ -4,10 +4,14 @@ const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise'); // Bản Promise tối ưu
+
 // --- THÊM 3 THƯ VIỆN ĐỂ XỬ LÝ ẢNH UPLOAD ---
 const multer = require('multer'); 
 const fs = require('fs');
 const path = require('path');
+
+// --- THÊM THƯ VIỆN GỬI MAIL OTP ---
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = 3000;
@@ -36,6 +40,19 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+// ==========================================
+
+// ==========================================
+// CẤU HÌNH GỬI MAIL (NODEMAILER)
+// ==========================================
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        // TODO: THAY EMAIL VÀ MẬT KHẨU ỨNG DỤNG CỦA BẠN VÀO ĐÂY
+        user: 'nphocntt2311054@student.ctuet.edu.vn', 
+        pass: 'mhutpwitzlohnyjf'        
+    }
+});
 // ==========================================
 
 
@@ -93,33 +110,40 @@ app.get('/', (req, res) => {
 
 // --- XÁC THỰC ---
 app.post('/register', async (req, res) => {
-    const { username, password, securityQuestion, securityAnswer } = req.body;
-    if (!username || !password || !securityQuestion || !securityAnswer) {
+    // 1. Chỉ lấy username, password và email từ giao diện gửi xuống
+    const { username, password, email } = req.body;
+    
+    // 2. Kiểm tra xem người dùng có điền thiếu ô nào không
+    if (!username || !password || !email) {
         return res.status(400).json({ success: false, message: 'Vui lòng nhập đủ thông tin.' });
     }
 
     try {
+        // 3. Kiểm tra xem tên đăng nhập đã có ai dùng chưa
         const [existing] = await db.query('SELECT id FROM users WHERE username = ?', [username]);
         if (existing.length > 0) return res.status(400).json({ success: false, message: 'Tên đăng nhập đã tồn tại.' });
 
+        // 4. Mã hóa mật khẩu
         const hashedPassword = await bcrypt.hash(password, saltRounds);
-        const hashedAnswer = await bcrypt.hash(securityAnswer, saltRounds);
 
+        // 5. Lưu vào Database (chỉ lưu 3 cột kia và gán sẵn role là 'user')
         await db.query(
-            `INSERT INTO users (username, password, securityQuestion, securityAnswer, role) VALUES (?, ?, ?, ?, 'user')`,
-            [username, hashedPassword, securityQuestion, hashedAnswer]
+            `INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'user')`,
+            [username, hashedPassword, email]
         );
+        
         res.json({ success: true, message: 'Đăng ký thành công!' });
     } catch (error) {
+        console.error('Lỗi khi đăng ký:', error);
         res.status(500).json({ success: false, message: 'Lỗi Database: ' + error.message });
-    }
+    }  
 });
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
         const [results] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-        const user = results[0];
+        const user = results[0];    
 
         if (!user) return res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không đúng.' });
 
@@ -179,34 +203,26 @@ app.get('/books/:id', async (req, res) => {
     }
 });
 
-
 // ==========================================
-// API THÊM SÁCH: HỖ TRỢ CẢ 2 CÁCH (UPLOAD FILE TỪ MÁY VÀ DÁN LINK)
+// API THÊM SÁCH
 // ==========================================
 app.post('/books', upload.single('imageFile'), async (req, res) => { 
-    // 1. Nhận dữ liệu từ Frontend gửi lên (Tên biến phải khớp với formData trong file admin.js của bạn)
     const { title, author, category, price, description, stock, imageUrl } = req.body;
     
-    // 2. Xử lý đường dẫn ảnh 
     let finalImageUrl = '';
     if (req.file) { 
-        // Cách 1: Tải file từ máy tính
         finalImageUrl = 'http://localhost:3000/uploads/' + req.file.filename;
     } else if (imageUrl && imageUrl.trim() !== '') {
-        // Cách 2: Dán link mạng
         finalImageUrl = imageUrl;
     } else {
-        // Mặc định nếu không có ảnh
         finalImageUrl = 'https://placehold.co/100x150?text=No+Image'; 
     }
 
     try {
-        // 3. Ép kiểu dữ liệu (Đổi giá trị 'category' thành số nguyên để chuẩn bị nhét vào cột 'category_id')
         const stockValue = stock ? parseInt(stock) : 1;
         const priceValue = price ? parseFloat(price) : 0;
         const categoryIdValue = parseInt(category); 
 
-        // Nếu file admin.html chưa sửa value thành số, chặn lại báo lỗi ngay để khỏi bị sập Database
         if (isNaN(categoryIdValue)) {
             return res.json({ 
                 success: false, 
@@ -214,18 +230,10 @@ app.post('/books', upload.single('imageFile'), async (req, res) => {
             });
         }
         
-        // 4. LƯU VÀO DATABASE (Đây là chỗ GỌI ĐÚNG TÊN CỘT TRONG BẢNG MYSQL CỦA BẠN: category_id, image_url)
         const sqlQuery = `INSERT INTO books (title, author, category_id, price, description, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?)`;
         
-        // Gắn các giá trị đã xử lý vào đúng vị trí dấu ?
         const [result] = await db.query(sqlQuery, [
-            title, 
-            author, 
-            categoryIdValue, // Lưu vào cột category_id
-            priceValue, 
-            description, 
-            finalImageUrl,   // Lưu vào cột image_url
-            stockValue
+            title, author, categoryIdValue, priceValue, description, finalImageUrl, stockValue
         ]);
         
         res.json({ success: true, message: 'Thêm sách thành công!', id: result.insertId });
@@ -258,10 +266,9 @@ app.delete('/admin/delete-book/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// API Cập nhật số lượng tồn kho của sách (Đã chuẩn hóa Promise)
 app.put('/admin/update-book/:id', async (req, res) => {
     const bookId = req.params.id;
-    const newStock = req.body.stock; // Số lượng mới gửi từ Frontend lên
+    const newStock = req.body.stock; 
 
     try {
         const sql = "UPDATE books SET stock = ? WHERE id = ?";
@@ -273,7 +280,6 @@ app.put('/admin/update-book/:id', async (req, res) => {
     }
 });
 
-// API SỬA THÔNG TIN SÁCH 
 app.put('/admin/edit-book/:id', async (req, res) => {
     const bookId = req.params.id;
     const { title, author, price } = req.body; 
@@ -288,14 +294,12 @@ app.put('/admin/edit-book/:id', async (req, res) => {
     }
 });
 
-
 // --- ĐƠN HÀNG KHÁCH VÃNG LAI ---
 app.post('/order', async (req, res) => {
     const { customer_name, phone, address, total_price, items } = req.body;
     if (!customer_name || !phone || !address || !items) return res.status(400).json({ success: false, message: 'Vui lòng điền đủ thông tin.' });
     
     try {
-        // 1. KIỂM TRA TỒN KHO TRƯỚC (CHỐNG MUA LỐ)
         if (Array.isArray(items)) {
             for (const item of items) {
                 const [bookInfo] = await db.query("SELECT stock, title FROM books WHERE id = ?", [item.id]);
@@ -311,13 +315,11 @@ app.post('/order', async (req, res) => {
             }
         }
 
-        // 2. NẾU ĐỦ KHO -> LƯU ĐƠN HÀNG
         const [result] = await db.query(
             `INSERT INTO orders (customer_name, phone, address, total_price, items, status) VALUES (?, ?, ?, ?, ?, 'Đang xử lý')`,
             [customer_name, phone, address, total_price, JSON.stringify(items)]
         );
 
-        // 3. TRỪ TỒN KHO
         if (Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {
@@ -337,7 +339,6 @@ app.post('/order', async (req, res) => {
 app.post('/checkout', async (req, res) => {
     const { user_id, customer_name, phone, address, items, total_price } = req.body;
     try {
-        // 1. KIỂM TRA TỒN KHO TRƯỚC (CHỐNG MUA LỐ)
         if (Array.isArray(items)) {
             for (const item of items) {
                 const [bookInfo] = await db.query("SELECT stock, title FROM books WHERE id = ?", [item.id]);
@@ -353,13 +354,11 @@ app.post('/checkout', async (req, res) => {
             }
         }
 
-        // 2. NẾU ĐỦ KHO -> LƯU ĐƠN HÀNG
         const [result] = await db.query(
             `INSERT INTO orders (user_id, customer_name, phone, address, items, total_price, status) VALUES (?, ?, ?, ?, ?, ?, 'Đang xử lý')`,
             [user_id, customer_name, phone, address, JSON.stringify(items), total_price]
         );
 
-        // 3. TRỪ TỒN KHO
         if (Array.isArray(items)) {
             for (const item of items) {
                 if (item.id) {
@@ -393,7 +392,6 @@ app.get('/admin/orders', checkAdmin, async (req, res) => {
     }
 });
 
-// API CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG (ĐÃ FIX LỖI PROMISE & THÊM LOGIC CỘNG LẠI KHO KHI HỦY)
 app.put('/admin/orders/:id', async (req, res) => {
     const orderId = req.params.id;
     const { status: newStatus } = req.body; 
@@ -405,7 +403,6 @@ app.put('/admin/orders/:id', async (req, res) => {
         const order = orders[0];
         const oldStatus = order.status;
 
-        // Xử lý an toàn JSON
         let items = [];
         try {
             if (typeof order.items === 'string') {
@@ -418,7 +415,6 @@ app.put('/admin/orders/:id', async (req, res) => {
             console.error("Lỗi parse items tại Backend:", e);
         }
 
-        // CỘNG LẠI KHO nếu chuyển sang Hủy hoặc Trả hàng
         if ((newStatus === 'Trả hàng' || newStatus === 'Đã hủy' || newStatus === 'Hủy đơn') && 
             (oldStatus !== 'Trả hàng' && oldStatus !== 'Đã hủy' && oldStatus !== 'Hủy đơn')) {
             
@@ -430,7 +426,6 @@ app.put('/admin/orders/:id', async (req, res) => {
             }
         }
 
-        // Cập nhật trạng thái vào database
         await db.query('UPDATE orders SET status = ? WHERE id = ?', [newStatus, orderId]);
 
         res.json({ success: true, message: "Cập nhật trạng thái thành công" });
@@ -473,6 +468,91 @@ app.post('/reset-password', async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi hệ thống.' });
     }
 });
+
+// ==========================================
+// THÊM MỚI: 2 API QUÊN MẬT KHẨU BẰNG OTP
+// ==========================================
+
+// 1. Gửi mã OTP vào Email
+app.post('/api/forgot-password-otp', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        // LƯU Ý QUAN TRỌNG: Lệnh SQL này giả định trong bảng 'users' của bạn có cột tên là 'email'
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        
+        if (users.length === 0) {
+            return res.json({ success: false, message: 'Email này không tồn tại trong hệ thống!' });
+        }
+
+        // Tạo mã OTP 6 số ngẫu nhiên
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+
+        // Lưu OTP và ExpireTime vào Database
+        await db.query('UPDATE users SET reset_otp = ?, reset_otp_expires = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE email = ?', [otp, email]);
+
+        // Cấu hình gửi mail
+        const mailOptions = {
+            from: 'BookNè Support <nhap_email_cua_ban_vao_day@gmail.com>', // Thay lại email gửi
+            to: email,
+            subject: 'Mã xác nhận khôi phục mật khẩu - BookNè',
+            html: `
+                <h3>Xin chào!</h3>
+                <p>Bạn vừa yêu cầu đặt lại mật khẩu tại hệ thống BookNè.</p>
+                <p>Mã xác nhận (OTP) của bạn là: <strong style="font-size: 24px; color: #10b981;">${otp}</strong></p>
+                <p>Mã này sẽ hết hạn sau 15 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: 'Đã gửi mã OTP vào email của bạn!' });
+
+    } catch (error) {
+        console.error("Lỗi khi gửi email OTP:", error);
+        res.json({ success: false, message: 'Lỗi hệ thống khi gửi email. Hãy kiểm tra lại tài khoản Gmail Admin!' });
+    }
+});
+
+// 2. Xác nhận OTP và Đổi mật khẩu
+app.post('/api/reset-password-otp', async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+
+    try {
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.json({ success: false, message: 'Lỗi dữ liệu: Không tìm thấy Email!' });
+        }
+
+        const user = users[0];
+
+        // Kiểm tra mã OTP
+        if (user.reset_otp !== otp) {
+            return res.json({ success: false, message: 'Mã OTP không chính xác!' });
+        }
+        
+        // Kiểm tra thời hạn OTP
+        if (new Date() > new Date(user.reset_otp_expires)) {
+            return res.json({ success: false, message: 'Mã OTP đã hết hạn! Vui lòng yêu cầu mã mới.' });
+        }
+
+        // Mã hóa mật khẩu mới y như lúc đăng ký
+        const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+        // Lưu mật khẩu mới và Xóa trắng mã OTP
+        await db.query(
+            'UPDATE users SET password = ?, reset_otp = NULL, reset_otp_expires = NULL WHERE email = ?', 
+            [hashedPassword, email]
+        );
+
+        res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+
+    } catch (error) {
+        console.error("Lỗi xác nhận OTP:", error);
+        res.json({ success: false, message: 'Lỗi hệ thống khi đổi mật khẩu.' });
+    }
+});
+// ==========================================
 
 app.get('/users', checkAdmin, async (req, res) => {
     try {
